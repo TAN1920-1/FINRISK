@@ -1,0 +1,11 @@
+# FinRisk AI machine-learning dependencies.
+# These are optional: the API degrades gracefully to a documented rule-based
+# baseline when they are unavailable.
+numpy>=1.26.0
+pandas>=2.2.0
+scikit-learn>=1.5.0
+joblib>=1.4.0
+# Optional gradient boosting backend (falls back to scikit-learn ensembles).
+xgboost>=2.1.0
+# Optional explainability backend (falls back to built-in permutation attribution).
+shap>=0.46.0

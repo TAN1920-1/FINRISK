@@ -1,186 +1,360 @@
-<img width="2764" height="1703" alt="tilt" src="https://github.com/user-attachments/assets/670163f7-112c-4792-9e57-e41b3ca9eaaf" />
+# FinRisk AI
 
+A financial and cyber risk intelligence platform. It keeps a risk register, models
+financial loss scenarios, tracks vulnerability findings and remediation, assesses
+third-party vendors with the inherited TILT questionnaire set, exports reports, and
+offers an optional machine-learning model over the register.
 
-## Project Overview
+The platform is multi-tenant: every record belongs to an organization, and every
+request is scoped to one. Nothing is shared between organizations.
 
-The **TILT Dashboard** is a complete, production-ready web application designed to implement **The Inherited Liability Toolkit (TILT)** framework. It provides a secure, centralized dashboard for managing and visualizing **third-party cybersecurity risk assessments** based on industry standards like **NIST CSF 2.0**.
+> **Honesty rules the code enforces.** Money is carried as a decimal string plus an
+> ISO-4217 currency code and is never converted or added across currencies. An absent
+> value renders as an em dash, never as `0`, because "not estimated" and "no loss" are
+> different statements. Every score, band and model output is accompanied by the rule
+> that produced it and a statement of what it does not mean. Demonstration rows are
+> flagged synthetic and are never presented as evidence about a real organization.
 
-This application is built with a decoupled architecture: a **FastAPI** (Python) backend serving a **React** frontend, intended for secure operation on `localhost`.
+---
+
+## 1. Architecture
 
 | Component | Technology | Role |
 | :--- | :--- | :--- |
-| **Backend** | Python (FastAPI) | REST API, Business Logic, Security, Data Layer |
-| **Frontend** | React, Vite, Tailwind CSS | Modern Dashboard, UI/UX, Visualization |
-| **Database** | SQLite3 | Encrypted Data Storage (Requires Master Password) |
-| **Security** | Argon2, Password Verification | Authentication and Data Protection (Tier 3 Compliance) |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2, Pydantic v2 | REST API, scoring, authorization, audit trail |
+| Frontend | React 18, TypeScript 5.7, Vite 5, Tailwind 3 | Dashboard and data-entry UI |
+| Database | SQLite by default | Persistence; PostgreSQL supported in principle (see §8) |
+| Auth | JWT (HS256, PyJWT) + Argon2id password hashing | Sessions, tenant scoping, roles |
+| ML (optional) | scikit-learn / joblib | Risk prioritisation model; degrades to a rule-based baseline |
+
+The frontend talks to the API over HTTP. In development the Vite dev server proxies
+`/api` to the backend, so the browser only ever sees one origin. The API origin is a
+build-time setting (`VITE_API_BASE_URL`), never a hard-coded hostname.
 
 ---
 
-## Quick Start
+## 2. Prerequisites
 
-To run the application, ensure you have the necessary dependencies installed for both the Python backend and the Node/Vite frontend.
-
-1. **Grant Execution Permissions:**
-    ```bash
-    chmod +x run.sh
-    ```
-2. **Execute the Startup Script:**
-    ```bash
-    ./run.sh
-    ```
-3. **Access the Dashboard:**
-    * **Frontend:** `http://localhost:3000`
-    * **Backend API Docs:** `http://127.0.0.1:8000/docs`
-
-Upon first launch, you will be prompted to set a **Master Password** to secure the application.
+* **Python 3.12+**
+* **Node.js 20+** and npm
 
 ---
 
-## Key Features Implemented
+## 3. Run it locally
 
-### Security & Compliance (Tier 3)
-* **Master Password System:** User-controlled encryption using a master password.
-* **Argon2 Key Derivation:** Master password hashed with the **Argon2** algorithm (key stored in `.tilt_key`).
-* **Database Protection:** Access to the SQLite3 database is protected via master password verification (SQLCipher planned for production).
-* **REST API Security:** All API endpoints require password verification for access.
+Two terminals. The backend must be started from inside `backend/` so that
+`app.main` resolves.
 
-### Core Assessment & Management
-* **Vendor Management:** Full CRUD operations for vendors (add, edit, view, delete).
-* **Standard Assessment (25 Questions):** NIST CSF 2.0 aligned questionnaire with maturity-based scoring (1-5 scale).
-* **Cloud Scorecard:** Mass-market cloud services assessment with 11 criteria and maturity-based scoring (0-5 scale).
-* **Configuration Editors:** UI for adding, editing, and managing assessment questions and cloud criteria, including maturity levels and notes.
-* **Real-time Calculations:** Automatic risk, likelihood, and vulnerability scoring.
+### Backend
 
-### OSINT (Open Source Intelligence) Integration
-* **Ransomware Leak Database Check:** Scans the Ransomwatch GitHub database for vendor breaches.
-* **SSL/TLS Certificate Validation:** Validates SSL certificates and checks expiration timeline (Grade A to F).
-* **DMARC Record Checking:** Validates email security (DMARC) policies with support for specifying **DMARC-enabled subdomains**.
-* **Warning Prioritization:** Vendors with OSINT warnings appear first on the dashboard.
-* **OSINT Acknowledgment:** Risk team can acknowledge warnings to reduce UI clutter.
+```bash
+cd backend
+python -m venv venv
+# Windows:        venv\Scripts\activate
+# macOS / Linux:  source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
 
-### User Interface (React)
-* **Modern Dashboard:** Clean, professional design with centralized risk matrix visualization.
-* **Responsive Layout:** Works on various screen sizes.
-* **Dynamic Tooltips:** Risk matrix tooltips adjust position to prevent clipping at edges.
+* API: <http://127.0.0.1:8000>
+* Interactive docs: <http://127.0.0.1:8000/docs>
+* Health and applied schema revisions: <http://127.0.0.1:8000/api/health>
 
----
+Database migrations are applied automatically on startup (the FastAPI lifespan
+handler). There is no separate migrate step; migrations are an ordered, append-only
+list recorded in the `schema_migrations` table.
 
-## Risk Matrix & Calculation Algorithms
+### Frontend
 
-The risk matrix is a 5x5 grid where vendors are plotted based on three calculated dimensions: **Impact (X-axis)**, **Likelihood (Y-axis)**, and **Vulnerability (Color)**.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-### 1. Impact (X-Axis)
+* App: <http://localhost:5173>
 
-Impact (1-5) is determined **solely** by the vendor's **Data Classification Tier** (1-5). It is **not** affected by OSINT results.
+The dev server proxies `/api` to `http://127.0.0.1:8000`. Point it elsewhere with
+`VITE_DEV_API_TARGET` if the backend runs on a different port.
 
+### Or use the wrapper scripts
 
-$$\text{X Position} = \frac{\text{Impact}}{5} \times 100\% \text{ (from left)}$$
-
-### 2. Likelihood (Y-Axis)
-
-Likelihood (1-5) reflects the probability of a breach. It is adjusted **only** by **Ransomware** OSINT findings.
-
-#### Standard Assessment Likelihood
-1.  Calculate average maturity score ($\overline{M}$) from the 25 questions.
-2.  **Inversion Formula:**
-    $$\text{Likelihood} = \text{clamp}(1, 5, \frac{6 - \overline{M}}{1.2})$$
-3.  **OSINT Adjustment:** If **Ransomware** is detected, $\text{Likelihood} = 5$ (Maximum).
-
-#### Cloud Scorecard Likelihood
-Determined by Total Score (Max 55) thresholds:
-* $45-55 \text{ (Elite)} \rightarrow \text{Likelihood} = 2$
-* $30-44 \text{ (Standard)} \rightarrow \text{Likelihood} = 3$
-* $15-29 \text{ (Deficient)} \rightarrow \text{Likelihood} = 4$
-* $0-14 \text{ (Critical)} \rightarrow \text{Likelihood} = 5$
-* **OSINT Adjustment:** If **Ransomware** is detected, $\text{Likelihood} = 5$.
-
-$$\text{Y Position} = \frac{\text{Likelihood}}{5} \times 100\% \text{ (from bottom)}$$
-
-### 3. Vulnerability (Color)
-
-Vulnerability (0-100%) determines the dot color (Black $0\% \rightarrow$ Bright Blue $100\%$). It reflects security posture and is adjusted by **SSL** and **DMARC** OSINT findings, but **not** by Ransomware.
-
-#### Standard Assessment Vulnerability
-1.  **Normalization:** $\text{Norm}_{q} = \frac{6 - \text{MaturityScore}}{5}$
-2.  **Weighted Average:** $\text{Vulnerability} = (\frac{\sum (\text{Norm}_{q} \times \text{Weight})}{\sum \text{Weights}}) \times 100$
-3.  **OSINT Adjustment (Minimum Thresholds):**
-    * If **SSL Expired** (Grade F): $\text{Vulnerability} = \text{max}(\text{Vulnerability}, 80\%)$
-    * If **DMARC Missing}: $\text{Vulnerability} = \text{max}(\text{Vulnerability}, 60\%)$
-
-#### Cloud Scorecard Vulnerability
-1.  **Vulnerability (Inverse Score):**
-    $$\text{Vulnerability} = (1 - \frac{\text{TotalScore}}{55}) \times 100$$
-2.  **OSINT Adjustment:**
-    * If a **Critical Criterion** is missed: $\text{Vulnerability} = 100\%$
-    * If **SSL Expired** (Grade F): $\text{Vulnerability} = \text{max}(\text{Vulnerability}, 80\%)$
-    * If **DMARC Missing}: $\text{Vulnerability} = \text{max}(\text{Vulnerability}, 60\%)$
+`./run.sh` (macOS / Linux) and `.\run.ps1` (Windows) create the virtual environment,
+install both dependency sets, and start both servers in the configuration above. They
+are convenience wrappers — the manual commands are the source of truth.
 
 ---
 
-## OSINT Security Checks and Impact
+## 4. Bootstrapping the first administrator
 
-The OSINT service (`backend/osint_service.py`) provides automated, non-cooperative security validation checks.
+There is no default account and no seeded password.
 
-### 1. Ransomware Leak Database Check
-* **What it is:** Searches the Ransomwatch GitHub database for the vendor name/domain.
-* **Impact:** If found, sets **Likelihood to 5 (Critical)**, indicating an active breach risk.
+1. Start both servers.
+2. Open <http://localhost:5173> and choose **Register**.
+3. The **first** account created becomes the administrator of a new organization, and
+   may always be created even when self-registration is closed. Every later
+   registration joins its own new organization as its administrator.
 
-### 2. SSL/TLS Certificate Validation
-* **What it is:** Checks the vendor's primary domain for certificate validity and expiration timeline.
-* **Impact:** If expired or expiring soon (Grade F, $<7$ days), sets **Vulnerability to a minimum of 80%**, indicating poor security operations.
+Additional members are added from **Settings → Members** by an administrator or risk
+manager. Self-registration is disabled automatically when `ENVIRONMENT=production`,
+so a production deployment is provisioned through the bootstrap account only.
 
-### 3. DMARC Record Checking
-* **What it is:** Queries DNS for a DMARC policy (`_dmarc.domain` TXT record) to check email anti-spoofing security.
-* **Impact:** If missing, sets **Vulnerability to a minimum of 60%**, indicating an email security weakness.
+### Optional: synthetic demonstration data
+
+```bash
+cd backend
+python -m app.cli seed-demo --email you@example.com
+```
+
+This creates a clearly labelled demonstration organization with assets, risks, loss
+scenarios, findings and remediation actions. It prints a generated administrator
+password once if you do not supply `--password`. **All rows it creates are synthetic
+demonstration data** (`is_demo=true`); they are not evidence about any real
+organization and must not be used for real risk decisions. The command is idempotent.
+
+`python -m app.cli status` prints the environment, database URL, migration state and
+whether demonstration data is enabled.
 
 ---
 
-You are correct. The structure still appears to be missing the initial heading and the code fence used in the previous step, causing it to run together with the preceding text.
+## 5. Configuration
 
-I will correct this by explicitly adding the `##` heading for the section and enclosing the directory tree in a triple-backtick code block.
+Every setting has a safe default, so the app runs with no configuration at all. Values
+are read from real environment variables first, then from a `.env` file in the
+repository root or in `backend/`.
 
-Here is the corrected section ready for your `README.md` file:
-
------
-
-## File Structure
+Variable names are the upper-cased field names from
+[`backend/app/config.py`](backend/app/config.py) with **no prefix** —
 
 ```
-TILT programming/
-├── frontend/                     # React frontend application
+ENVIRONMENT=production   DATABASE_URL=...   SECRET_KEY=...   CORS_ORIGINS=...
+DEMO_DATA_ENABLED=false  ALLOW_OPEN_REGISTRATION=false      OSINT_LIVE_CHECKS=false
+```
+
+| Variable | Default | Notes |
+| :--- | :--- | :--- |
+| `ENVIRONMENT` | `development` | `production` enables the guard rails below |
+| `DATABASE_URL` | `sqlite:///<backend>/finrisk.db` | SQLAlchemy URL |
+| `SECRET_KEY` | generated | **Required** when `ENVIRONMENT=production` |
+| `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173` | Comma-separated |
+| `ALLOW_OPEN_REGISTRATION` | `true` | Forced off in production |
+| `DEMO_DATA_ENABLED` | `true` | Forced off in production |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `720` | |
+| `LOGIN_RATE_LIMIT_ATTEMPTS` / `_WINDOW_SECONDS` | `8` / `300` | Per email + client IP |
+| `MIN_PASSWORD_LENGTH` | `10` | Plus a mixed-character and distinct-character rule |
+| `OSINT_LIVE_CHECKS` | `true` | When false, vendor scanning makes no network or DNS calls |
+| `NVD_API_KEY` | empty | Optional; raises the NVD rate limit |
+
+In development the JWT signing key is generated once and written to
+`backend/.finrisk_secret` (git-ignored) so restarts do not invalidate sessions. In
+production a key is never auto-generated — startup fails with a clear error instead.
+
+Frontend variables (`frontend/.env`): `VITE_API_BASE_URL` (empty means "same origin")
+and `VITE_DEV_API_TARGET`. Only `VITE_`-prefixed values reach the browser bundle, so
+no secret belongs in that file.
+
+---
+
+## 6. Roles and permissions
+
+Enforced server-side on every request. The same list drives which buttons the UI hides;
+hiding a button is presentation, not security.
+
+| Role | Rank | Capabilities |
+| :--- | :--- | :--- |
+| `admin` | 4 | Everything, including `audit:read`, `org:manage`, `user:manage`, `ai:train` |
+| `risk_manager` | 3 | Write risk, asset, financial, vulnerability and mitigation records; export reports; manage organization and users; train models |
+| `analyst` | 2 | Write risk, asset, financial, vulnerability and mitigation records; export reports |
+| `viewer` | 1 | Read-only across all registers |
+
+Only `admin` can read the audit trail. Tenant scoping is independent of role: a
+superuser naming an organization they do not belong to in `X-Organization-Id` still
+receives `403`.
+
+---
+
+## 7. Tests
+
+**Backend** — 66 tests covering auth, tenancy isolation, the risk register, the
+financial engine, the TILT module, reports, the audit trail and the system endpoints.
+They set their own environment, use a throwaway SQLite file, and reset the schema per
+test.
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+pytest
+```
+
+**Frontend** — 77 Vitest tests over the presentation helpers (the money and missing-value
+rules), the URL-backed list state and the core UI primitives.
+
+```bash
+cd frontend
+npm run test        # vitest run
+npm run typecheck   # tsc --noEmit
+npm run build       # typecheck + production build
+```
+
+---
+
+## 8. Deployment
+
+### Frontend
+
+```bash
+cd frontend
+npm run build
+```
+
+This typechecks first, then emits a static bundle to `frontend/dist/`. Serve it from any
+static host. Set `VITE_API_BASE_URL` at build time if the API is not on the same origin;
+leave it empty and reverse-proxy `/api` to the backend if it is.
+
+### Backend
+
+```bash
+cd backend
+ENVIRONMENT=production \
+SECRET_KEY="<48+ random bytes>" \
+CORS_ORIGINS="https://your-frontend.example.com" \
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+Or with the supplied image (built from the **repository root**, since the build context
+must contain both the requirements file and the backend source):
+
+```bash
+docker build -f backend/Dockerfile -t finrisk-api .
+docker run --rm -p 8000:8000 \
+  -e ENVIRONMENT=production \
+  -e SECRET_KEY="..." \
+  -e CORS_ORIGINS="https://your-frontend.example.com" \
+  -v finrisk-data:/data \
+  finrisk-api
+```
+
+Checklist before exposing an instance:
+
+* [ ] `ENVIRONMENT=production` and an explicit `SECRET_KEY`.
+* [ ] `CORS_ORIGINS` names only your real frontend origins.
+* [ ] The API is behind TLS (tokens travel in the `Authorization` header).
+* [ ] `backend/.finrisk_secret`, any `.env` and the database file are **not** in version
+      control — the repository `.gitignore` covers all three.
+* [ ] `/api/health` reports the schema revisions you expect.
+
+### PostgreSQL
+
+`DATABASE_URL` accepts any SQLAlchemy URL, and the schema is portable, but **no
+PostgreSQL driver is installed by default**. Add one before switching:
+
+```bash
+pip install "psycopg[binary]"
+```
+
+`backend/Dockerfile` installs `libpq5` so only the Python driver is missing.
+
+---
+
+## 9. Project structure
+
+```
+FINRISK/
+├── backend/
+│   ├── app/
+│   │   ├── main.py               FastAPI app factory, routers, error envelope
+│   │   ├── config.py             Environment-driven settings
+│   │   ├── db.py                 Engine, sessions, ordered migration runner
+│   │   ├── models.py             SQLAlchemy ORM models
+│   │   ├── schemas.py            Pydantic request/response models
+│   │   ├── domain.py             Roles, permissions, severity bands, audit actions
+│   │   ├── deps.py               Auth, role, tenant and paging dependencies
+│   │   ├── security.py           Password hashing, JWT, rate limiting
+│   │   ├── cli.py                seed-demo and status commands
+│   │   ├── routers/              One module per API area
+│   │   ├── services/             Reports, OSINT, scenarios, demo data, exports
+│   │   ├── scoring/              Risk and financial scoring rules
+│   │   └── ml/                   Optional model training and inference
+│   ├── data/                     TILT questionnaire templates (seeded by migration)
+│   ├── tests/                    pytest suite
+│   └── requirements*.txt
+├── frontend/
 │   ├── src/
-│   │   ├── components/           # React UI components
-│   │   ├── utils/                # Risk calculation logic (frontend)
-│   │   └── api.js                # API client (REST calls to backend)
-├── backend/                      # FastAPI backend application
-│   ├── main.py                   # FastAPI app and REST endpoints
-│   ├── database.py               # Database layer (SQLite3)
-│   ├── risk_calculator.py        # Risk calculation logic (backend)
-│   ├── osint_service.py          # OSINT integration
-│   ├── requirements.txt          # Python dependencies
-│   ├── data/                     # Assessment question templates
-│   └── tilt_data.db              # SQLite database file
-├── docs/                         # Documentation and algorithms
-│   ├── LINUX_SETUP.md
-│   └── RISK_MATRIX_ALGORITHM.txt
-├── fonts/                        # Custom font files (Poppins)
-└── run.sh                        # Startup script
+│   │   ├── app/                  Providers, router, navigation
+│   │   ├── components/           UI primitives and layout shell
+│   │   ├── hooks/                URL-backed list state
+│   │   ├── lib/                  API client, formatting rules, query client
+│   │   ├── pages/                One module per screen
+│   │   └── types/                Shared API types
+│   └── vite.config.ts            Dev proxy and Vitest configuration
+├── docs/                         Algorithms, OSINT notes, Linux setup
+├── run.sh / run.ps1              Dev convenience wrappers
+└── README.md
 ```
 
+---
+
+## 10. Known limitations
+
+These are deliberate, documented boundaries — not outstanding bugs.
+
+**Data and model honesty**
+* Scores are a convention, not objective truth. The 5×5 likelihood × impact score
+  encodes an analyst-defined scale; the same is true of severity bands and of the
+  model's target, which is that band.
+* The ML model reproduces the organization's own scoring convention. Predicted
+  probabilities are **model scores and are not calibrated real-world probabilities**,
+  and feature attributions describe model behaviour only — they are not causal claims.
+* With fewer than `RETRAIN_MIN_ROWS` (default 60) stored rows the model cannot be
+  trained; the API reports a rule-based fallback state instead of a number.
+* Demonstration and synthetic rows carry no information about any real organization.
+* Financial figures depend entirely on the assumptions entered. They are scenario
+  arithmetic, not forecasts, and no currency is ever converted.
+
+**Output formats**
+* Server-side report rendering produces CSV and PDF. The API also accepts `json` for
+  programmatic callers, but `json` is rejected on the export endpoint, which records
+  report history.
+* PDF layout is fixed: no custom branding, templating or pagination control.
+
+**External intelligence**
+* With `OSINT_LIVE_CHECKS=false` no network or DNS calls are made at all; vendor scans
+  return an explicit "checks are disabled" note. With checks enabled, results depend on
+  third-party services (NVD, CISA KEV, public DNS, Ransomwatch) and are only as current
+  and as complete as those sources. Findings are advisory.
+* There is no scheduled background scanning; scans run on request.
+
+**Deployment and operations**
+* No email delivery: notifications are in-app only, and there is no password-reset flow.
+  An administrator must set a new password.
+* SQLite is the default and is fine for a single instance. A multi-worker or multi-host
+  deployment should move to PostgreSQL **and install a driver** (see §8).
+* Rate limiting is in-process (a sliding window held in memory), so it is per-worker and
+  resets on restart. A reverse proxy or shared store should enforce the real limit at
+  the edge.
+* The audit trail is append-only and organization-scoped; it is not shipped anywhere and
+  has no retention policy.
+* The frontend ships as a single JavaScript bundle (~1.1 MB, ~300 KB gzipped). There is
+  no route-level code splitting yet, so the first load fetches the whole application.
+* Vulnerability findings can be imported from a CSV file. The upload is capped by
+  `MAX_UPLOAD_MB` (default 5) and is parsed in memory; there is no virus scanning and no
+  asynchronous job queue for very large files.
+
+**Legacy material**
+* `backend/main.py`, `backend/database.py`, `backend/risk_calculator.py`,
+  `backend/osint_service.py` and `backend/ransom_cache.json` are the superseded
+  single-tenant TILT application. They are **not** imported by `app.main` and are kept
+  only for reference. The current TILT vendor module lives in
+  [`backend/app/routers/tilt.py`](backend/app/routers/tilt.py) and
+  [`backend/app/services/legacy_calculator.py`](backend/app/services/legacy_calculator.py).
+  Migration `0003_import_legacy_tilt` opens an existing `tilt_data.db` read-only and
+  imports its vendors; it never mutates the legacy file.
 
 ---
 
-## Next Steps for Production
+## 11. Further documentation
 
-1.  **Deployment & Encryption:** Migrate the database to **SQLCipher** for true production-grade encryption. Implement session management (e.g., JWT).
-2.  **Reporting:** Add PDF report generation and CSV export capabilities for analysis.
-3.  **Advanced OSINT:** Implement API keys and advanced rate limiting for additional third-party OSINT services. Implement scheduled OSINT scans.
-4.  **Testing:** Develop comprehensive unit, integration, and security tests.
-
----
-
-## Support
-
-For questions or issues:
-1.  Review `docs/LINUX_SETUP.md` for installation help.
-2.  Review `docs/RISK_MATRIX_ALGORITHM.txt` for detailed calculation logic
+* [`docs/RISK_MATRIX_ALGORITHM.txt`](docs/RISK_MATRIX_ALGORITHM.txt) — TILT risk matrix and scoring
+* [`docs/OSINT_CHECKS_DOCUMENTATION.txt`](docs/OSINT_CHECKS_DOCUMENTATION.txt) — OSINT checks and their impact
+* [`docs/LINUX_SETUP.md`](docs/LINUX_SETUP.md) — Linux setup notes
+* [`PROJECT_SUMMARY.md`](PROJECT_SUMMARY.md) — feature and API inventory

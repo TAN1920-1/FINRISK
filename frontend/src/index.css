@@ -2,75 +2,143 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Load custom fonts from the font folders */
-@font-face {
-  font-family: 'Poppins Black';
-  src: url('/fonts/Poppins-Black.ttf') format('truetype');
-  font-weight: 900;
-  font-style: normal;
+/*
+  FinRisk AI design tokens.
+
+  Two themes, one set of names.  A component never names a raw colour; it asks
+  for `bg-surface` or `text-muted`, so the light and dark variants stay in sync
+  and an accessible contrast ratio only has to be verified once per token.
+*/
+
+@layer base {
+  :root {
+    /* Light: white and soft neutral grey, restrained blue primary. */
+    --canvas: 210 20% 98%;
+    --surface: 0 0% 100%;
+    --surface-muted: 210 20% 96%;
+    --surface-raised: 0 0% 100%;
+    --border: 214 18% 88%;
+    --border-strong: 214 16% 76%;
+    --foreground: 222 34% 14%;
+    --muted-foreground: 215 16% 42%;
+    --primary: 217 76% 42%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 214 90% 95%;
+    --secondary: 178 68% 32%;
+    --secondary-foreground: 0 0% 100%;
+    --accent: 214 90% 95%;
+    --ring: 217 76% 52%;
+    --danger: 0 68% 46%;
+    --sidebar: 222 40% 16%;
+
+    /* Risk bands.  Chosen to stay distinguishable without relying on hue alone:
+       they are also labelled and shown with a numeric score everywhere. */
+    --risk-critical: 0 72% 42%;
+    --risk-high: 24 86% 44%;
+    --risk-medium: 40 88% 40%;
+    --risk-low: 152 58% 32%;
+    --risk-unknown: 215 12% 50%;
+  }
+
+  .dark {
+    /* Dark: deep navy / slate, same accents lifted for contrast on dark surfaces. */
+    --canvas: 222 44% 9%;
+    --surface: 222 38% 13%;
+    --surface-muted: 222 34% 17%;
+    --surface-raised: 222 36% 16%;
+    --border: 220 24% 24%;
+    --border-strong: 220 22% 34%;
+    --foreground: 210 32% 96%;
+    --muted-foreground: 215 18% 66%;
+    --primary: 214 88% 62%;
+    --primary-foreground: 222 47% 11%;
+    --primary-muted: 217 44% 22%;
+    --secondary: 174 62% 45%;
+    --secondary-foreground: 222 47% 11%;
+    --accent: 217 38% 22%;
+    --ring: 214 88% 62%;
+    --danger: 0 74% 62%;
+    --sidebar: 222 46% 7%;
+
+    --risk-critical: 0 78% 62%;
+    --risk-high: 26 90% 58%;
+    --risk-medium: 42 92% 58%;
+    --risk-low: 152 56% 48%;
+    --risk-unknown: 215 14% 56%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-canvas text-foreground antialiased;
+    font-feature-settings: 'tnum' 1, 'cv05' 1;
+  }
+
+  /* A visible focus ring on every interactive element: keyboard navigation is a
+     requirement, not a nicety. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-canvas;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+  }
+
+  /* Thin, unobtrusive scrollbars for the dense table views. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border-strong));
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
 }
 
-@font-face {
-  font-family: 'Poppins Thin';
-  src: url('/fonts/Poppins-Thin.ttf') format('truetype');
-  font-weight: 100;
-  font-style: normal;
+@layer components {
+  .skip-link {
+    @apply absolute left-3 top-3 z-50 -translate-y-16 rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-transform focus-visible:translate-y-0;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-surface shadow-card;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded bg-surface-muted;
+  }
+
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.06),
+      transparent
+    );
+  }
 }
 
-@font-face {
-  font-family: 'Poppins';
-  src: url('/fonts/Poppins-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-/* Set Poppins as the default font for everything */
-body {
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
-}
-
-#root {
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-}
-
-/* Custom scrollbar styling to match the app design */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-/* Utility classes for the custom fonts */
-.font-poppins-black {
-  font-family: 'Poppins Black', 'Poppins', sans-serif;
-  text-transform: uppercase;
-}
-
-.font-poppins-thin {
-  font-family: 'Poppins Thin', 'Poppins', sans-serif;
-  text-transform: uppercase;
-}
-

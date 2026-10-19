@@ -1,283 +1,162 @@
-# TILT Dashboard - Project Summary
+# FinRisk AI — Feature and API Inventory
 
-## Overview
+Companion to [README.md](README.md), which covers how to run and deploy the platform.
+This file is the feature and endpoint inventory.
 
-This is a complete, production-ready web application for implementing the TILT (The Inherited Liability Toolkit) framework. The application provides a secure dashboard for managing third-party cybersecurity risk assessments. Built with a FastAPI backend and React frontend, running on localhost.
+---
 
-## Key Features Implemented
+## 1. Feature areas
 
-### Security (Tier 3 Compliance)
-- **Argon2 Key Derivation**: Master password hashed with Argon2
-- **Database Protection**: SQLite3 with master password authentication
-- **REST API Security**: Secure API endpoints with password verification
-- **Master Password System**: User-controlled encryption (SQLCipher planned for production)
+| Area | What it does |
+| :--- | :--- |
+| **Risk register** | Risks with a 5×5 likelihood × impact inherent score, residual scoring, lifecycle status, owner assignment, reassessment history and evidence records. |
+| **Assets** | Business assets with criticality and classification; each asset links to the risks that touch it, so exposure can be rolled up per asset. |
+| **Financial exposure** | Loss scenarios built from explicit assumptions (frequency, per-event loss, insurance, controls) that compute gross, net, expected and residual loss in one currency, with the formula shown next to every figure. |
+| **Vulnerability findings** | Findings with upstream CVSS values *and* the platform's own priority score, CSV import, and linkage to assets and mitigating actions. |
+| **Mitigation plans** | Remediation actions with status, owner and due date, linked back to the risk or finding they address. |
+| **Third-party (TILT) module** | Vendor assessments using the preserved TILT standard questionnaire (25 questions, max 100) and cloud scorecard (11 criteria, max 55), with a knockout rule for missed critical criteria, plus optional OSINT scanning. |
+| **Reports** | Eight document types rendered to CSV or PDF, previewable before export, with an export history. |
+| **Dashboard** | Aggregated counts, severity mix, remediation status and modelled exposure. Reports an explicit empty state rather than zeros when there is no data. |
+| **AI / ML (optional)** | Model status, training, per-risk prediction with feature attributions, and deterministic (non-model) insights. Falls back to a documented rule-based baseline. |
+| **Audit trail** | Append-only, organization-scoped record of changes, written on the same transaction as the change it describes. Administrator-only. |
+| **Notifications** | Per-user in-app notification inbox. |
+| **Organizations & membership** | Tenant records, membership with roles, organization switching, member invitations, role changes. |
 
-### Core Functionality
-- **25-Question Standard Assessment**: Complete NIST CSF 2.0 aligned questionnaire with maturity-based scoring (1-5 scale)
-- **Cloud Scorecard**: Mass-market cloud services assessment with 11 criteria, maturity-based scoring (0-5 scale per criterion)
-- **Risk Matrix Visualization**: 5x5 gradient matrix with vulnerability scoring
-- **Vendor Management**: Full CRUD operations for vendors (add, edit, view, delete)
-- **OSINT Integration**: Automated security checks with warning system and acknowledgment feature
-- **Settings Management**: Organization name and password change
-- **Question/Criteria Editing**: Add, edit, and manage assessment questions and cloud criteria with maturity levels and notes
+---
 
-### User Interface
-- **Modern Dashboard**: Clean, professional design with risk matrix visualization
-- **Responsive Layout**: Works on various screen sizes
-- **OSINT Warning Prioritization**: Vendors with warnings appear first (no separate section)
-- **OSINT Acknowledgment**: Risk team can acknowledge OSINT warnings to reduce UI clutter
-- **Real-time Calculations**: Automatic risk and vulnerability scoring
-- **Intuitive Navigation**: Sidebar-based navigation with grouped actions (Add buttons first, Edit buttons below)
-- **Dynamic Tooltips**: Risk matrix tooltips adjust position to prevent clipping at edges
+## 2. Roles
 
-## File Structure
+| Role | Rank | Summary |
+| :--- | :--- | :--- |
+| `admin` | 4 | Full access; the only role with `audit:read` |
+| `risk_manager` | 3 | Full write access to registers; manages organization, users and model training |
+| `analyst` | 2 | Full write access to registers; no user or organization management |
+| `viewer` | 1 | Read-only |
 
-```
-TILT programming/
-├── frontend/                    # React frontend application
-│   ├── src/
-│   │   ├── components/          # React components
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── RiskMatrix.jsx
-│   │   │   ├── VendorCard.jsx
-│   │   │   ├── AddVendorForm.jsx
-│   │   │   ├── ViewVendor.jsx
-│   │   │   ├── QuestionEditor.jsx
-│   │   │   ├── CloudScorecardForm.jsx
-│   │   │   ├── CloudMatrixEditor.jsx
-│   │   │   ├── OSINTPage.jsx
-│   │   │   ├── SettingsPage.jsx
-│   │   │   ├── Sidebar.jsx
-│   │   │   └── UnlockScreen.jsx
-│   │   ├── utils/
-│   │   │   └── riskCalculator.js    # Risk calculation logic
-│   │   ├── api.js               # API client (REST calls to backend)
-│   │   ├── App.jsx              # Main app component
-│   │   ├── main.jsx             # React entry point
-│   │   └── index.css            # Global styles
-│   ├── index.html               # HTML template
-│   ├── package.json             # Node dependencies
-│   ├── vite.config.js           # Vite configuration
-│   └── tailwind.config.js       # Tailwind CSS config
-├── backend/                     # FastAPI backend application
-│   ├── main.py                  # FastAPI app and REST endpoints
-│   ├── database.py              # Database layer (SQLite3)
-│   ├── risk_calculator.py       # Risk calculation logic
-│   ├── osint_service.py         # OSINT integration
-│   ├── requirements.txt         # Python dependencies
-│   ├── data/                    # Question templates
-│   │   ├── questions_standard.json  # 25 standard questions
-│   │   └── questions_cloud.json     # 11 cloud criteria
-│   ├── ransom_cache.json        # Cached ransomware database
-│   └── tilt_data.db             # SQLite database
-├── docs/                        # Documentation files
-│   ├── GITHUB_DESCRIPTION.txt
-│   ├── LINUX_SETUP.md
-│   ├── OSINT_CHECKS_DOCUMENTATION.txt
-│   ├── RISK_MATRIX_ALGORITHM.txt
-│   └── TECHNOLOGY_INVENTORY.txt
-├── fonts/                       # Custom font files
-│   ├── Poppins-Black.ttf
-│   ├── Poppins-Regular.ttf
-│   └── Poppins-Thin.ttf
-├── run.sh                       # Startup script (runs both frontend & backend)
-└── PROJECT_SUMMARY.md           # This file
-```
+Capability strings (`risk:read`, `risk:write`, `asset:read`, `asset:write`,
+`financial:read`, `financial:write`, `vulnerability:read`, `vulnerability:write`,
+`mitigation:read`, `mitigation:write`, `ai:read`, `ai:train`, `report:read`,
+`report:export`, `audit:read`, `org:manage`, `user:manage`) are returned by
+`GET /api/auth/me` so the UI can hide actions. They are presentation-level only —
+every endpoint re-checks the caller's role and organization on the server.
 
-## Security Architecture
+---
 
-### Authentication Flow
-1. User sets master password on first launch
-2. Password hashed with Argon2 (stored in `.tilt_key`)
-3. Master password required to unlock database
-4. All API endpoints verify password before access
-5. All vendor data, assessments, and settings protected
+## 3. Scoring rules
 
-### Data Protection
-- **At Rest**: SQLite3 database (SQLCipher encryption planned for production)
-- **In Transit**: REST API over localhost (127.0.0.1:8000)
-- **Authentication**: Argon2 password hashing
-- **Access Control**: Master password verification on all database operations
+**Inherent risk score.** `score = clamp(likelihood, 1, 5) × clamp(impact, 1, 5)`, an
+integer from 1 to 25. Severity bands:
 
-## Assessment Types
+| Band | Score range |
+| :--- | :--- |
+| critical | 20–25 |
+| high | 12–19 |
+| medium | 5–11 |
+| low | 1–4 |
 
-### Standard Assessment
-- 25 questions aligned with NIST CSF 2.0
-- Maturity-based scoring (1-5 scale per question)
-- Weighted by importance (Critical/High/Medium)
-- Multiple-choice options with full metric descriptions
-- Questions can be added, edited, and managed via Question Editor
-- Calculates:
-  - Impact score (1-5) - based on data classification tier
-  - Likelihood score (1-5) - based on maturity scores, adjusted by ransomware OSINT
-  - Vulnerability percentage (0-100%) - based on maturity scores, adjusted by SSL/DMARC OSINT
+**Financial scenario.** From the entered assumptions the engine computes gross loss,
+net loss after insurance (insurance recovery is capped at the gross loss), expected loss
+(gross × probability), and residual loss after controls. If no residual probability is
+supplied the residual figure equals the expected figure and the response says so
+explicitly. Amounts are decimal strings with an ISO-4217 code and are never converted.
 
-### Cloud Scorecard
-- 11 criteria for mass-market cloud services
-- Maturity-based scoring (0-5 scale per criterion)
-- Each criterion has 6 maturity levels (0-5) with detailed descriptions
-- Critical controls trigger knockout rule (0 score = automatic rejection)
-- Criteria can be added, edited, and managed via Cloud Matrix Editor
-- Calculates:
-  - Total score (0-55 points, max 55)
-  - Approval status (Elite/Standard/Deficient/Critical)
-  - Impact score (1-5) - based on data classification tier only
-  - Likelihood score (1-5) - based on total score thresholds, adjusted by ransomware OSINT
-  - Vulnerability percentage (0-100%) - based on score, adjusted by SSL/DMARC OSINT
+**TILT standard assessment.** Vulnerability is the importance-weighted mean of the
+inverted maturity answers, scaled to 0–100 (Critical weight 3×, High 2×, otherwise 1×).
+With no answers scored the result is 0 and the verdict is REJECT.
 
-## OSINT Integration
+**TILT cloud scorecard.** Total out of 55. A Critical criterion scored 0 forces
+rejection regardless of the total.
 
-Current implementation includes real OSINT checks:
-- **Ransomware Leak Database**: Checks Ransomwatch GitHub database for vendor names
-- **SSL/TLS Certificate Validation**: Validates SSL certificates and checks expiration
-- **DMARC Record Checking**: Validates email security (DMARC) policies with subdomain support
+Full derivations are in [docs/RISK_MATRIX_ALGORITHM.txt](docs/RISK_MATRIX_ALGORITHM.txt).
 
-**OSINT Impact on Risk Calculation:**
-- **Ransomware**: Sets likelihood to maximum (5) - indicates active breach risk
-- **SSL Expired**: Sets vulnerability to minimum 80% - indicates poor security posture
-- **DMARC Missing**: Sets vulnerability to minimum 60% - indicates email security weakness
+---
 
-**DMARC Subdomains Feature:**
-- Users can specify DMARC-enabled email subdomains to prevent false positives
-- Example: GitHub's primary domain lacks DMARC, but subdomains (e.g., `github.com`) have it
-- System checks specified subdomains first, falling back to primary domain if none provided
+## 4. API surface
 
-**OSINT Acknowledgment:**
-- Risk team can acknowledge OSINT warnings on vendor detail pages
-- Acknowledged vendors show brief message instead of full warning text on dashboard
-- Helps reduce UI clutter while maintaining awareness of acknowledged risks
+All routes are mounted under `/api`. Every route is organization-scoped; the caller's
+organization is taken from the `X-Organization-Id` header, falling back to the `org`
+claim in the token and then to the caller's first membership.
 
-**Implementation details:**
-- Service located in `backend/osint_service.py`
-- Rate limiting and caching to prevent excessive API calls
-- Results stored as warnings on vendor records
-- Warnings automatically prioritize vendors in dashboard display (flagged vendors appear first)
+### System
 
-## Risk Calculation
+| Method | Path | Notes |
+| :--- | :--- | :--- |
+| GET | `/` | Service card |
+| GET | `/api/health` | Liveness plus the schema revisions the process believes are applied |
 
-### Vulnerability Score
-- Based on assessment answers (maturity scores)
-- Weighted by question/criterion importance
-- Inverted: High maturity score = Low vulnerability
-- Range: 0% (fully protected) to 100% (fully exposed)
-- **OSINT Adjustments**: SSL/DMARC issues increase vulnerability (minimum thresholds applied)
+### Authentication and membership — `/api/auth`
 
-### Impact Score
-- Based solely on data classification tier (1-5)
-- Not affected by OSINT results
-- Standard assessment: Derived from data classification
-- Cloud scorecard: Derived from data classification tier only
+`POST /register`, `POST /login`, `GET /me`, `POST /switch-organization/{id}`,
+`POST /password`, `POST /logout`, `GET /members`, `POST /members`, `PATCH /members/{id}`
+(role change), `GET /roles`.
 
-### Likelihood Score
-- Standard assessment: Based on average maturity score (inverted)
-- Cloud scorecard: Based on total score thresholds
-- **OSINT Adjustment**: Only ransomware affects likelihood (sets to 5)
-- SSL and DMARC do NOT affect likelihood
+### Registers
 
-### Risk Matrix
-- X-axis: Impact (1-5)
-- Y-axis: Likelihood (1-5)
-- Color: Vulnerability (Black=0% to Blue=100%)
-- Zones: Green (low), Yellow (medium), Orange (high), Red (critical)
-- Tooltips: Dynamically positioned to prevent clipping at edges
+| Area | Endpoints |
+| :--- | :--- |
+| Risks | `/api/risks` list, create, detail, update, delete; `/options`, `/meta`, `/export`, `/{id}/status`, `/{id}/owner`, `/{id}/assessments`, `/{id}/evidence` |
+| Assets | `/api/assets` list, create, detail, update, delete; `/options`, `/{id}/risks` |
+| Vulnerabilities | `/api/vulnerabilities/findings` list, create, detail, update, delete; `/findings/export`, `/imports`, CSV import, `/meta`, `/cve/{cve_id}` |
+| Mitigations | `/api/mitigations` list, create, detail, update, delete; `/meta` |
+| Financial scenarios | `/api/financial-scenarios` list, create, detail, update, delete; `/preview`, `/compare`, `/meta`, `/export`, `/{id}/calculate` |
 
-## Database Schema
+### Reporting, governance and platform
 
-### Tables
-- **vendors**: Vendor information, assessments, OSINT results, acknowledgment status
-- **questions**: Standard assessment questions with maturity levels and notes
-- **cloud_criteria**: Cloud scorecard criteria with maturity levels and notes
-- **settings**: Application settings (organization name, etc.)
+| Area | Endpoints |
+| :--- | :--- |
+| Reports | `/api/reports/catalog`, `/api/reports` (history), `/preview`, `/export` |
+| Dashboard | `GET /api/dashboard` |
+| Audit trail | `/api/audit-logs`, `/api/audit-logs/meta`, `/api/audit-logs/export` (admin only) |
+| Notifications | `/api/notifications`, `/summary`, `/{id}/read`, `/read-all`, `/meta` |
+| AI / ML | `/api/ai/status`, `/models`, `/train`, `/predict`, `/insights` |
+| Organizations | `/api/organizations`, `/current`, `/current/summary`, `/current/check-access/{id}` |
+| TILT | `/api/tilt/templates/{kind}` CRUD, `/api/tilt/vendors` CRUD, `/vendors/{id}/calculate`, `/vendors/{id}/osint-scan`, `/vendors/{id}/acknowledge` |
 
-### Vendor Table Fields
-- Basic info: name, status, data_classification
-- Assessment data: answers (JSON), cloudScores (JSON)
-- OSINT data: osint_warnings (JSON), osint_urls (JSON), osint_acknowledged (BOOLEAN)
-- DMARC subdomains: stored in osint_urls.dmarc_subdomains
+### Report types
 
-### Security
-- Master password required to access database
-- Password hashed with Argon2 (stored separately in `.tilt_key`)
-- SQLCipher encryption planned for production deployment
+`executive_summary`, `risk_register`, `financial_exposure`, `vulnerability_assessment`,
+`asset_risk`, `mitigation_progress`, `model_evaluation`, `scenario_comparison`.
 
-## Next Steps for Production
+`GET /api/reports/catalog` returns this list with titles and descriptions so the UI never
+hardcodes it.
 
-1. **OSINT API Integration**
-   - Add real API keys for additional services
-   - Implement advanced rate limiting
-   - Add more comprehensive error handling
+### Conventions
 
-2. **Export/Import**
-   - PDF report generation
-   - CSV export for analysis
-   - Database backup/restore
+* **Paging**: `page` (≥1), `page_size` (1–200, default 25), `sort`, `order` (`asc`/`desc`).
+  Responses use a `Page[T]` envelope of `{items, total, page, page_size, pages}`.
+* **Errors**: a single envelope — `{detail, errors?, request_id}`. Validation failures
+  return 422 with a list of `{location, message, type}`. Permission failures return the
+  backend's own message verbatim so the UI can explain which role is required.
+* **Request correlation**: every response carries `X-Request-Id`, echoing a supplied one
+  or minting a new one.
+* **Timestamps**: UTC, serialised with an explicit offset. A timestamp without an offset
+  is read as UTC, not as local time.
 
-3. **Advanced Features**
-   - Scheduled OSINT scans
-   - Email notifications
-   - Multi-user support
-   - Audit logging
+---
 
-4. **Testing**
-   - Unit tests for calculations
-   - Integration tests for API endpoints
-   - Frontend component tests
-   - Security testing
+## 5. Data model
 
-5. **Deployment**
-   - SQLCipher migration for production encryption
-   - Session management (JWT or session-based auth)
-   - Production deployment configuration
-   - Database backup/restore functionality
+Organizations own everything. Tables created by migration `0001_initial_schema`:
 
-## Compliance Notes
+`organizations`, `users`, `organization_memberships`, `assets`, `risks`,
+`risk_assessments`, `evidence_records`, `financial_scenarios`, `vulnerabilities`,
+`vulnerability_findings`, `import_batches`, `mitigations`, `model_versions`,
+`model_predictions`, `notifications`, `audit_logs`, `generated_reports`,
+`questionnaire_templates`, `vendor_assessments`, `schema_migrations`.
 
-This application is designed to handle **Tier 3 (Internal Use Only)** data:
-- Internal memos
-- Vendor lists
-- Risk assessments
-- Security analysis
+Migration `0002_questionnaire_templates` seeds the TILT questionnaire templates from
+`backend/data/`. Migration `0003_import_legacy_tilt` imports vendors from an existing
+legacy `tilt_data.db` if one is present, opening it read-only.
 
-All data is encrypted at rest and requires authentication to access.
+Demonstration rows are flagged `is_demo=true` throughout.
 
-## Running the Application
+---
 
-1. **Quick Start:**
-   ```bash
-   chmod +x run.sh
-   ./run.sh
-   ```
+## 6. Repository layout
 
-2. **Access:**
-   - Frontend: http://localhost:3000
-   - Backend API: http://127.0.0.1:8000
-   - API Docs: http://127.0.0.1:8000/docs
+See [README.md §9](README.md#9-project-structure). In short: `backend/app` is the API
+(routers → services → models), `backend/tests` is the pytest suite, `frontend/src` is the
+React application (pages → components → lib), and `docs/` holds the algorithm and OSINT
+notes carried over from the TILT framework.
 
-## Architecture Notes
-
-This application uses a web-based architecture:
-- **Frontend**: React + Vite (standalone web app)
-- **Backend**: FastAPI (Python REST API)
-- **Database**: SQLite3 (SQLCipher planned)
-- **Communication**: REST API over localhost
-
-## Typography & Fonts
-
-### Poppins
-- **Usage**: Used for all text including headings and UI elements
-- **Variants Used**: 
-  - Poppins Black: Used for main headings (e.g., "WELCOME BACK!")
-  - Poppins Thin: Used for section titles and labels
-  - Poppins Regular: Default body font
-- **Location**: Font files stored in `/fonts/` directory
-- **Note**: Applied with uppercase text transform for headings and labels
-
-Font configuration is defined in `frontend/src/index.css` using `@font-face` declarations.
-
-## Support
-
-For questions or issues:
-1. Review `docs/LINUX_SETUP.md` for installation help
-2. Check code comments for implementation details
-3. Review `docs/OSINT_CHECKS_DOCUMENTATION.txt` for OSINT details
-4. Review `docs/RISK_MATRIX_ALGORITHM.txt` for risk calculation details
+Limitations and boundaries are listed in [README.md §10](README.md#10-known-limitations).

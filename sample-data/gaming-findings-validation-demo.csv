@@ -1,0 +1,9 @@
+title,cve_id,asset_ref,asset_id,description,cvss_score,cvss_severity,detected_at,vulnerability_age_days,exploit_evidence,internet_exposed,remediation_status,remediation_due_date,compensating_controls
+Valid row one - weak TLS ciphers on the launcher update channel,CVE-2026-50101,,,Launcher update channel negotiates weak cipher suites,5.5,medium,2026-09-20T09:00:00,,false,true,open,2026-12-30,Update payloads are signed
+,CVE-2026-50102,,,This row has no value in the title column so it is rejected,4.0,medium,2026-09-20T09:05:00,,false,false,open,2026-12-30,None
+Row rejected because the remediation status is unknown,CVE-2026-50103,,,This row uses wont_fix which is not a recognised remediation status,6.0,medium,2026-09-20T09:10:00,,false,false,wont_fix,2026-12-30,None
+Row rejected because the CVSS score is above the permitted range,CVE-2026-50104,,,This row asks for a CVSS score greater than ten,13.5,critical,2026-09-20T09:15:00,,false,false,open,2026-12-30,None
+Row rejected because asset_ref matches no asset in the registry,CVE-2026-50105,GAME-NOPE-99,,This row points at an asset reference the organisation does not have,7.0,high,2026-09-20T09:20:00,,false,false,open,2026-12-30,None
+Row rejected because asset_id references no known asset,CVE-2026-50106,,999999,This row points at a numeric asset identifier that does not exist,7.0,high,2026-09-20T09:25:00,,false,false,open,2026-12-30,None
+Valid row two - missing transport security on the support portal,CVE-2026-50107,,,Support portal is reachable over plain transport from the internal network,6.3,medium,2026-09-20T09:30:00,,false,false,in_progress,2026-12-30,Access is limited to corporate network ranges
+Valid row three - boolean columns accept the variant yes,CVE-2026-50108,,,This row imports because yes is accepted as a true value,4.4,medium,2026-09-20T09:35:00,,yes,yes,open,2026-12-30,None

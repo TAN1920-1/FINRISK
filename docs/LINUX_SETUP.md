@@ -1,53 +1,51 @@
-# TILT Dashboard - Linux Setup Guide
+# FinRisk AI — Linux Setup Guide
 
-This guide explains how to set up and run the TILT Dashboard on Linux.
+Linux specifics for running FinRisk AI. The authoritative run and deploy instructions
+live in [../README.md](../README.md); this file covers only the Linux details.
 
 ## Prerequisites
 
-- **Python 3.12+** (check with `python3 --version`)
-- **Node.js 16+** and npm (check with `node --version` and `npm --version`)
-- **Linux** (tested on Ubuntu/Debian, should work on other distros)
+- **Python 3.12+** — `python3 --version`
+- **Node.js 20+ and npm** — `node --version`
+- Tested on Ubuntu/Debian; other distributions should work.
+- On Debian/Ubuntu the virtual environment module is a separate package:
 
-## Quick Start
+  ```bash
+  sudo apt-get install -y python3-venv
+  ```
 
-1. **Make the startup script executable:**
-   ```bash
-   chmod +x run.sh
-   ```
+## Quick start
 
-2. **Run the application:**
-   ```bash
-   ./run.sh
-   ```
+```bash
+./run.sh
+```
 
-   This script will:
-   - Create a Python virtual environment in `/backend/venv` (if it doesn't exist)
-   - Install Python dependencies from `backend/requirements.txt`
-   - Start the FastAPI backend on `http://127.0.0.1:8000`
-   - Install Node.js dependencies (if needed)
-   - Start the React frontend dev server on `http://localhost:3000`
+The script creates `backend/venv` if it is missing, installs both dependency sets, and
+starts:
 
-3. **Open your browser:**
-   - Navigate to `http://localhost:3000`
-   - The frontend will automatically connect to the backend API
+- the API on <http://127.0.0.1:8000>
+- the frontend dev server on <http://localhost:5173>
 
-## Manual Setup (Alternative)
+Press `Ctrl+C` in that terminal to stop both.
 
-If you prefer to run the servers manually:
+## Manual setup
 
-### Backend Setup
+### Backend
 
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### Frontend Setup
+`app.main:app` must be run from inside `backend/`. Database migrations are applied
+automatically on startup, so there is no separate migrate step.
 
-In a separate terminal:
+### Frontend
+
+In a second terminal:
 
 ```bash
 cd frontend
@@ -55,113 +53,72 @@ npm install
 npm run dev
 ```
 
-## Project Structure
+The dev server proxies `/api` to `http://127.0.0.1:8000`, so the browser only ever talks
+to one origin. Set `VITE_DEV_API_TARGET` to point the proxy somewhere else.
 
+### First account
+
+Open <http://localhost:5173> and register. The first account becomes the administrator.
+There is no default password.
+
+## Tests
+
+```bash
+# Backend
+cd backend
+source venv/bin/activate
+pip install -r requirements-dev.txt
+pytest
+
+# Frontend
+cd frontend
+npm run test
+npm run typecheck
 ```
-TILT programming/
-├── frontend/          # React + Vite frontend
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── api.js         # API utility (fetch calls)
-│   │   └── utils/         # Risk calculator
-│   ├── package.json
-│   └── vite.config.js
-├── backend/           # FastAPI backend
-│   ├── main.py            # FastAPI app & endpoints
-│   ├── database.py        # SQLite database layer
-│   ├── risk_calculator.py # Risk calculation logic
-│   ├── osint_service.py   # OSINT security checks
-│   ├── requirements.txt
-│   └── data/              # Question JSON files
-├── run.sh             # Startup script
-└── LINUX_SETUP.md     # This file
-```
 
-## Security Notes
+## Deployment
 
-### Current Implementation
-
-- **Password Hashing:** Argon2 (via `passlib[argon2]`)
-- **Database:** Standard SQLite3 (unencrypted)
-- **Master Password:** Stored as Argon2 hash in `.tilt_key`
-
-### Future: SQLCipher Migration
-
-To enable database encryption (TILT Tier 3 compliance):
-
-1. Install `libsqlcipher-dev`:
-   ```bash
-   sudo apt-get install libsqlcipher-dev
-   ```
-
-2. Install `pysqlcipher3`:
-   ```bash
-   cd backend
-   source venv/bin/activate
-   pip install pysqlcipher3
-   ```
-
-3. Update `backend/database.py` to use SQLCipher instead of sqlite3
-4. The encryption key will be derived from the master password using Argon2
-
-**WARNING:** The current implementation uses unencrypted SQLite. Do not use in production without SQLCipher.
+See [../README.md §8](../README.md#8-deployment). In short: `npm run build` emits
+`frontend/dist/`, and the API runs behind a process manager or the supplied
+`backend/Dockerfile`. Set `ENVIRONMENT=production` and an explicit `SECRET_KEY`, and
+never commit `backend/.finrisk_secret`, `.env` or the database file.
 
 ## Troubleshooting
 
-### Port Already in Use
+### Port already in use
 
-If port 3000 or 8000 is already in use:
+The frontend dev server uses `strictPort`, so it fails rather than silently moving to
+another port.
 
-- **Backend:** Edit `backend/main.py` and change the port in `uvicorn.run()`
-- **Frontend:** Edit `frontend/vite.config.js` and change the `server.port` value
+- **Backend:** choose another `--port`.
+- **Frontend:** change `server.port` in `frontend/vite.config.ts`, or free port 5173.
 
-### Python Virtual Environment Issues
+### `ModuleNotFoundError: No module named 'app'`
 
-If the venv fails to create:
+Uvicorn was started from the repository root instead of `backend/`. Either `cd backend`
+first or pass `--app-dir backend`.
 
-```bash
-sudo apt-get install python3-venv
-```
+### `sqlite3.OperationalError: database is locked`
 
-### Node.js Not Found
+Only one process may hold the SQLite file at a time. Stop other running instances. The
+file lives at `backend/finrisk.db` by default; override it with `DATABASE_URL`. Delete it
+to start from an empty schema — migrations re-run on the next start.
 
-Install Node.js:
+### Sessions drop on every restart
 
-```bash
-# Ubuntu/Debian
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-```
+The development signing key is stored in `backend/.finrisk_secret`. If that file is not
+writable, a new key is generated on each start and every existing token becomes invalid.
+Supply a fixed `SECRET_KEY` instead.
 
-### Database Locked Error
+### `SECRET_KEY must be provided explicitly when ENVIRONMENT=production`
 
-If you see "Database is locked" errors:
-
-1. Make sure no other process is using the database
-2. Check `backend/tilt_data.db` file permissions
-3. Delete `backend/.tilt_key` to reset (WARNING: This will require setting a new password)
-
-## Stopping the Application
-
-Press `Ctrl+C` in the terminal running `run.sh`, or:
+Intentional. Production never auto-generates a signing key. Provide one:
 
 ```bash
-pkill -f 'uvicorn main:app'
-pkill -f 'vite'
+export SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
 ```
 
-## Development
+### CORS errors in the browser
 
-- **Backend logs:** `tail -f /tmp/tilt-backend.log`
-- **Frontend logs:** `tail -f /tmp/tilt-frontend.log`
-- **API docs:** Visit `http://127.0.0.1:8000/docs` (FastAPI auto-generated docs)
-
-## Next Steps
-
-1. Set your master password on first launch
-2. Add vendors and run assessments
-3. Use OSINT tools to check vendor security posture
-4. Review the risk matrix visualization
-
-For questions or issues, check the code comments (they're written for future-you).
-
+Add the exact frontend origin (scheme, host and port) to `CORS_ORIGINS`, which is a
+comma-separated list.
