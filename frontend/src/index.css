@@ -5,21 +5,21 @@
 /* Load custom fonts from the font folders */
 @font-face {
   font-family: 'Poppins Black';
-  src: url('../../../Poppins Fonts/Poppins-Black.ttf') format('truetype');
+  src: url('/fonts/Poppins-Black.ttf') format('truetype');
   font-weight: 900;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Poppins Thin';
-  src: url('../../../Poppins Fonts/Poppins-Thin.ttf') format('truetype');
+  src: url('/fonts/Poppins-Thin.ttf') format('truetype');
   font-weight: 100;
   font-style: normal;
 }
 
 @font-face {
   font-family: 'Poppins';
-  src: url('../../../Poppins Fonts/Poppins-Regular.ttf') format('truetype');
+  src: url('/fonts/Poppins-Regular.ttf') format('truetype');
   font-weight: 400;
   font-style: normal;
 }
