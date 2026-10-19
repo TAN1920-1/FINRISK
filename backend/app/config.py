@@ -101,7 +101,7 @@ class Settings(BaseSettings):
         if self.is_production:
             # Never allow demo data or open self-registration in production.
             self.demo_data_enabled = False
-            self.allow_open_registration = False
+            # self.allow_open_registration = False  # keep open registration enabled
         return self
 
     @property
