@@ -68,7 +68,7 @@ class Settings(BaseSettings):
     login_rate_limit_window_seconds: int = 300
 
     # --- HTTP --------------------------------------------------------------
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,https://finrisk-beta.vercel.app"
     max_upload_mb: int = 5
     http_timeout_seconds: int = 15
 
