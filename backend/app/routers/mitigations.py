@@ -8,18 +8,24 @@ likelihood/impact values (see ``PATCH /api/risks/{id}``).
 
 from __future__ import annotations
 
+import csv
+import io
 from datetime import date
+from decimal import InvalidOperation
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .. import domain
 from ..audit import record_audit
+from ..config import settings
 from ..deps import CanManage, CanWrite, Paging, SessionDep, Tenant, TenantContext, client_ip
-from ..models import Membership, Mitigation, Risk, User, utcnow
+from ..models import ImportBatch, Membership, Mitigation, Risk, User, utcnow
 from ..schemas import (
+    ImportErrorRow,
+    ImportResultOut,
     Message,
     MitigationCreate,
     MitigationOut,
@@ -29,7 +35,16 @@ from ..schemas import (
     Page,
 )
 from ..serializers import mitigation_out
-from ..services.common import build_page, count_for, next_reference, ordered
+from ..services.common import (
+    build_page,
+    count_for,
+    next_reference,
+    ordered,
+    parse_date,
+    parse_money,
+    parse_share,
+    parse_timestamp,
+)
 from ..services.notifications import notify_user
 
 router = APIRouter(prefix="/api/mitigations", tags=["mitigations"])
@@ -240,6 +255,262 @@ def create_mitigation(
     db.commit()
     db.refresh(mitigation)
     return mitigation_out(mitigation, risk=risk)
+
+
+@router.post(
+    "/import",
+    response_model=ImportResultOut,
+    summary="Import remediation actions from CSV",
+)
+async def import_mitigations(
+    request: Request,
+    tenant: CanWrite,
+    db: SessionDep,
+    file: UploadFile = File(...),
+) -> ImportResultOut:
+    """Import remediation actions from CSV.
+
+    Required columns: ``risk_ref`` (must match a risk already in the register)
+    and ``description``.
+    Optional: ``action_ref``, ``priority`` (low/medium/high/critical),
+    ``owner_email`` (must be a member of this organization), ``due_date``
+    (ISO-8601), ``estimated_cost`` (amount, blank means not estimated),
+    ``currency`` (ISO-4217), ``status`` (planned/in_progress/blocked/completed/
+    cancelled), ``expected_risk_reduction`` (a share from 0 to 1), ``evidence``,
+    ``completion_notes`` and ``completed_at`` (ISO-8601).
+
+    ``completed_at`` is accepted so a historical plan can be loaded without every
+    action landing on the import date; a value with no timezone offset is read as
+    UTC, and a row whose status is ``completed`` without a ``completed_at`` is
+    stamped with the import time.  Rows are validated before anything is written:
+    a reference that already exists is reported as an error row rather than
+    colliding with the unique constraint.
+    """
+    filename = (file.filename or "mitigations.csv").strip()
+    if not filename.lower().endswith(".csv"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Only .csv files can be imported."
+        )
+
+    raw = await file.read()
+    if len(raw) > settings.max_upload_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"The file exceeds the {settings.max_upload_mb} MB import limit.",
+        )
+
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        try:
+            text = raw.decode("latin-1")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="The file is not readable text."
+            ) from exc
+
+    reader = csv.DictReader(io.StringIO(text))
+    if not reader.fieldnames:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The CSV file is empty.")
+
+    headers = {(name or "").strip().lower() for name in reader.fieldnames}
+    if "risk_ref" not in headers or "description" not in headers:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The CSV must contain at least 'risk_ref' and 'description' columns.",
+        )
+
+    batch = ImportBatch(
+        organization_id=tenant.organization_id,
+        uploaded_by_id=tenant.user.id,
+        filename=filename,
+        rows_total=0,
+    )
+    db.add(batch)
+    db.flush()
+
+    risks_by_ref = {
+        risk.risk_ref.lower(): risk
+        for risk in db.execute(
+            select(Risk).where(Risk.organization_id == tenant.organization_id)
+        ).scalars()
+    }
+    #: Only members of this organization may be assigned work (see ``_validate_assignee``).
+    members_by_email = {
+        user.email.lower(): user
+        for user in db.execute(
+            select(User)
+            .join(Membership, Membership.user_id == User.id)
+            .where(Membership.organization_id == tenant.organization_id)
+        ).scalars()
+    }
+    taken_refs = {
+        ref.lower()
+        for ref in db.execute(
+            select(Mitigation.action_ref).where(
+                Mitigation.organization_id == tenant.organization_id
+            )
+        )
+        .scalars()
+        .all()
+    }
+
+    errors: list[ImportErrorRow] = []
+    created = 0
+    rows = list(reader)
+    batch.rows_total = len(rows)
+
+    for index, row in enumerate(rows, start=2):
+        normalised = {str(key or "").strip().lower(): value for key, value in row.items()}
+        description = str(normalised.get("description") or "").strip()
+        risk_ref = str(normalised.get("risk_ref") or "").strip().lower()
+
+        if not risk_ref:
+            errors.append(ImportErrorRow(row=index, error="Missing required 'risk_ref' value."))
+            continue
+        if not description:
+            errors.append(ImportErrorRow(row=index, error="Missing required 'description' value."))
+            continue
+
+        risk = risks_by_ref.get(risk_ref)
+        if risk is None:
+            errors.append(ImportErrorRow(row=index, error=f"Unknown risk_ref '{risk_ref}'."))
+            continue
+
+        priority = (
+            str(normalised.get("priority") or "").strip().lower() or domain.Severity.MEDIUM.value
+        )
+        try:
+            domain.Severity(priority)
+        except ValueError:
+            errors.append(ImportErrorRow(row=index, error=f"Unknown priority '{priority}'."))
+            continue
+
+        mit_status = (
+            str(normalised.get("status") or "").strip().lower()
+            or domain.MitigationStatus.PLANNED.value
+        )
+        try:
+            domain.MitigationStatus(mit_status)
+        except ValueError:
+            errors.append(ImportErrorRow(row=index, error=f"Unknown status '{mit_status}'."))
+            continue
+
+        owner = None
+        owner_email = str(normalised.get("owner_email") or "").strip().lower()
+        if owner_email:
+            owner = members_by_email.get(owner_email)
+            if owner is None:
+                errors.append(
+                    ImportErrorRow(
+                        row=index,
+                        error=f"Unknown owner_email '{owner_email}'; the assignee must be a member.",
+                    )
+                )
+                continue
+
+        cost_text = str(normalised.get("estimated_cost") or "").strip()
+        try:
+            estimated_cost = parse_money(cost_text)
+        except (InvalidOperation, ValueError):
+            errors.append(ImportErrorRow(row=index, error=f"Invalid estimated_cost '{cost_text}'."))
+            continue
+
+        currency = str(normalised.get("currency") or "").strip().upper() or "USD"
+        if len(currency) != 3 or not currency.isalpha():
+            errors.append(
+                ImportErrorRow(
+                    row=index, error=f"Invalid currency '{currency}'; use a three-letter ISO-4217 code."
+                )
+            )
+            continue
+
+        try:
+            expected_risk_reduction = parse_share(normalised.get("expected_risk_reduction"))
+        except ValueError:
+            errors.append(
+                ImportErrorRow(
+                    row=index, error="Invalid expected_risk_reduction; use a share from 0 to 1."
+                )
+            )
+            continue
+
+        try:
+            due_date = parse_date(normalised.get("due_date"))
+            completed_at = parse_timestamp(normalised.get("completed_at"))
+        except ValueError:
+            errors.append(
+                ImportErrorRow(
+                    row=index, error="Invalid due_date or completed_at; use an ISO-8601 date."
+                )
+            )
+            continue
+
+        explicit_ref = str(normalised.get("action_ref") or "").strip()
+        if explicit_ref:
+            if explicit_ref.lower() in taken_refs:
+                errors.append(
+                    ImportErrorRow(
+                        row=index, error=f"Action reference '{explicit_ref}' already exists."
+                    )
+                )
+                continue
+            action_ref = explicit_ref
+        else:
+            action_ref = next_reference(db, Mitigation, tenant.organization_id, "MIT", column="action_ref")
+            while action_ref.lower() in taken_refs:
+                action_ref = f"MIT-{int(action_ref.split('-')[-1]) + 1:04d}"
+        taken_refs.add(action_ref.lower())
+
+        db.add(
+            Mitigation(
+                organization_id=tenant.organization_id,
+                risk_id=risk.id,
+                action_ref=action_ref,
+                description=description,
+                priority=priority,
+                assigned_user_id=owner.id if owner else None,
+                due_date=due_date,
+                estimated_cost=estimated_cost,
+                currency=currency,
+                status=mit_status,
+                expected_risk_reduction=expected_risk_reduction,
+                evidence=str(normalised.get("evidence") or "").strip() or None,
+                completion_notes=str(normalised.get("completion_notes") or "").strip() or None,
+                completed_at=(
+                    completed_at
+                    or (
+                        utcnow()
+                        if mit_status == domain.MitigationStatus.COMPLETED.value
+                        else None
+                    )
+                ),
+            )
+        )
+        created += 1
+
+    batch.rows_created = created
+    batch.rows_failed = len(errors)
+    batch.errors = [item.model_dump() for item in errors]
+
+    record_audit(
+        db,
+        action=domain.AuditAction.MITIGATION_CREATED.value,
+        user=tenant.user,
+        organization_id=tenant.organization_id,
+        entity_type="import_batch",
+        entity_id=batch.id,
+        detail={"filename": filename, "created": created, "failed": len(errors)},
+    )
+    db.commit()
+    return ImportResultOut(
+        batch_id=batch.id,
+        filename=filename,
+        rows_total=batch.rows_total,
+        rows_created=created,
+        rows_failed=len(errors),
+        errors=errors,
+    )
 
 
 @router.get("/{mitigation_id}", response_model=MitigationOut, summary="Fetch one mitigation")

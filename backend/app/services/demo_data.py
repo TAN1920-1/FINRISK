@@ -52,6 +52,44 @@ DEMO_ORGANIZATION_NAME = "Northwind Financial Group (synthetic demo)"
 
 BUSINESS_UNITS = ("Retail Banking", "Wealth Management", "Payments", "Corporate IT")
 
+#: Demonstration colleagues.  Ownership fields (asset owner, risk owner and
+#: remediation assignee) reference real accounts, so this team is created up
+#: front with fixed addresses that the sample CSVs can also name in
+#: ``owner_email``.  They share the administrator's password so a demonstration
+#: can sign in as any of them and show role-specific views.
+TEAM: tuple[dict[str, str], ...] = (
+    {
+        "email": "security.lead@finrisk-demo.com",
+        "name": "Priya Raghavan",
+        "role": domain.Role.RISK_MANAGER.value,
+        "job_title": "Head of Security Risk",
+    },
+    {
+        "email": "platform.sre@finrisk-demo.com",
+        "name": "Marcus Lindqvist",
+        "role": domain.Role.ANALYST.value,
+        "job_title": "Platform Reliability Lead",
+    },
+    {
+        "email": "payments.lead@finrisk-demo.com",
+        "name": "Aisha Bello",
+        "role": domain.Role.ANALYST.value,
+        "job_title": "Payments Operations Manager",
+    },
+    {
+        "email": "grc.analyst@finrisk-demo.com",
+        "name": "Tomas Nowak",
+        "role": domain.Role.ANALYST.value,
+        "job_title": "Governance, Risk and Compliance Analyst",
+    },
+    {
+        "email": "engineering.lead@finrisk-demo.com",
+        "name": "Hannah Osei",
+        "role": domain.Role.ANALYST.value,
+        "job_title": "Engineering Manager",
+    },
+)
+
 #: Assets the demo register is built around.  Deterministic, so two runs on two
 #: machines produce the same register.
 ASSETS: tuple[dict[str, Any], ...] = (
@@ -774,8 +812,33 @@ def seed_demo_data(
         )
     )
 
+    team: list[User] = []
+    for member in TEAM:
+        user = User(
+            email=member["email"],
+            full_name=member["name"],
+            password_hash=hash_password(admin_password),
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        db.add(
+            Membership(
+                user_id=user.id,
+                organization_id=organization.id,
+                role=member["role"],
+                job_title=member["job_title"],
+            )
+        )
+        team.append(user)
+    db.flush()
+
+    #: Owners cycle through the administrator and the team so the ownership
+    #: fields are populated rather than every record belonging to one person.
+    owners: list[User] = [admin, *team]
+
     assets: dict[str, Asset] = {}
-    for spec in ASSETS:
+    for index, spec in enumerate(ASSETS):
         asset = Asset(
             organization_id=organization.id,
             asset_ref=spec["ref"],
@@ -784,7 +847,7 @@ def seed_demo_data(
             asset_type=spec["asset_type"],
             environment=spec["environment"],
             business_unit=spec["business_unit"],
-            owner_id=admin.id,
+            owner_id=owners[index % len(owners)].id,
             criticality=spec["criticality"],
             data_sensitivity=spec["data_sensitivity"],
             internet_exposed=spec["internet_exposed"],
@@ -799,7 +862,7 @@ def seed_demo_data(
     db.flush()
 
     risks: dict[str, Risk] = {}
-    for spec in RISKS:
+    for index, spec in enumerate(RISKS):
         residual = spec["residual"]
         risk = Risk(
             organization_id=organization.id,
@@ -810,7 +873,7 @@ def seed_demo_data(
             source="Demonstration seeder",
             asset_id=assets[spec["asset_ref"]].id if spec["asset_ref"] else None,
             business_unit=spec["business_unit"],
-            owner_id=admin.id,
+            owner_id=owners[index % len(owners)].id,
             threat_scenario=spec["threat_scenario"],
             likelihood=spec["likelihood"],
             impact=spec["impact"],
@@ -897,7 +960,7 @@ def seed_demo_data(
             action_ref=f"MIT-{index:04d}",
             description=spec["description"],
             priority=spec["priority"],
-            assigned_user_id=admin.id,
+            assigned_user_id=owners[index % len(owners)].id,
             due_date=today + timedelta(days=due) if due is not None else None,
             estimated_cost=Decimal(spec["estimated_cost"]),
             currency=organization.currency,
@@ -942,6 +1005,7 @@ def seed_demo_data(
         "organization_id": organization.id,
         "organization_slug": organization.slug,
         "administrator_email": admin.email,
+        "team_emails": [member["email"] for member in TEAM],
         "counts": counts,
         "note": (
             "All rows created by this command are synthetic demonstration data and are "

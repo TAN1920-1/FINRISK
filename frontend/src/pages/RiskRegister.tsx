@@ -394,7 +394,7 @@ export function RiskRegisterPage() {
           queryKey={['risks']}
           invalidateKeys={[['scenarios'], ['dashboard'], ['ai']]}
           title="Import risks from a CSV file"
-          description="Required columns: title and category. Optional: risk_ref, description, asset_ref, likelihood (1–5), impact (1–5), status, business_unit and owner_email. Fill in any loss-scenario column (probability, direct_loss, revenue_loss, downtime_hours, downtime_cost_per_hour, recovery_cost, incident_response_cost, regulatory_cost, other_cost, insurance_recovery, mitigation_cost) to create the linked financial scenario as well."
+          description="Required columns: title and category. Optional: risk_ref, description, asset_ref, source, threat_scenario, likelihood (1–5), impact (1–5), residual_likelihood and residual_impact (1–5; both required together), status, business_unit, owner_email, evidence_quality (none/low/medium/high/verified), due_date, financial_impact_assumptions, existing_controls, mitigation_plan, created_at and closed_at (ISO-8601). Fill in any loss-scenario column (probability, direct_loss, revenue_loss, downtime_hours, downtime_cost_per_hour, recovery_cost, incident_response_cost, regulatory_cost, other_cost, insurance_recovery, mitigation_cost) to create the linked financial scenario as well."
         />
       ) : null}
     </div>

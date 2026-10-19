@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
-from decimal import Decimal, InvalidOperation
+from decimal import InvalidOperation
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile, status
@@ -26,7 +26,14 @@ from ..schemas import (
     RiskOut,
 )
 from ..serializers import asset_out, risk_out
-from ..services.common import build_page, next_reference, ordered
+from ..services.common import (
+    build_page,
+    next_reference,
+    ordered,
+    parse_money,
+    parse_scale,
+    parse_timestamp,
+)
 
 router = APIRouter(prefix="/api/assets", tags=["assets"])
 
@@ -39,21 +46,6 @@ SORTABLE = {
     "updated_at": Asset.updated_at,
     "last_assessed_at": Asset.last_assessed_at,
 }
-
-
-def _money(raw: object) -> Optional[Decimal]:
-    """Parse a money cell into 2-decimal currency.
-
-    A blank cell means "not valued" and stays ``None`` rather than becoming a
-    zero; anything else that is not a non-negative number raises.
-    """
-    text = str(raw or "").strip().replace(",", "")
-    if not text:
-        return None
-    amount = Decimal(text)
-    if amount < 0:
-        raise ValueError(text)
-    return amount.quantize(Decimal("0.01"))
 
 
 def _rollups(db, organization_id: int, asset_ids: list[int]) -> tuple[dict[int, int], dict[int, int], dict[int, str]]:
@@ -299,8 +291,11 @@ async def import_assets(
 
     Required columns: ``name``, ``asset_type``.
     Optional: ``asset_ref``, ``description``, ``environment``, ``business_unit``,
+    ``owner_email`` (must be an existing member of this organization),
     ``criticality`` (1-5), ``data_sensitivity`` (1-5), ``internet_exposed`` (yes/no),
-    ``financial_importance`` (amount, blank means not valued), ``currency`` (ISO-4217).
+    ``financial_importance`` (amount, blank means not valued), ``currency`` (ISO-4217),
+    ``dependencies``, ``existing_controls`` and ``last_assessed_at`` (ISO-8601);
+    a blank ``last_assessed_at`` defaults to the import time.
 
     Rows are validated before anything is written: a reference that already exists
     is reported as an error row rather than colliding with the unique constraint.
@@ -363,6 +358,10 @@ async def import_assets(
         .all()
     }
 
+    users_by_email = {
+        user.email.lower(): user for user in db.execute(select(User)).scalars()
+    }
+
     for index, row in enumerate(rows, start=2):
         normalised = {str(key or "").strip().lower(): value for key, value in row.items()}
         name = str(normalised.get("name") or "").strip()
@@ -391,7 +390,7 @@ async def import_assets(
 
         money_text = str(normalised.get("financial_importance") or "").strip()
         try:
-            financial_importance = _money(money_text)
+            financial_importance = parse_money(money_text)
         except (InvalidOperation, ValueError):
             errors.append(
                 ImportErrorRow(
@@ -425,15 +424,27 @@ async def import_assets(
                 asset_ref = f"AST-{int(asset_ref.split('-')[-1]) + 1:04d}"
         taken_refs.add(asset_ref.lower())
 
-        def _to_scale(val, default=3):
-            try:
-                v = int(float(str(val or "").strip()))
-                return v if 1 <= v <= 5 else default
-            except (ValueError, TypeError):
-                return default
+        owner = None
+        owner_email = str(normalised.get("owner_email") or "").strip().lower()
+        if owner_email:
+            owner = users_by_email.get(owner_email)
+            if owner is None:
+                errors.append(
+                    ImportErrorRow(row=index, error=f"Unknown owner_email '{owner_email}'.")
+                )
+                continue
 
-        def _truthy(val):
-            return str(val or "").strip().lower() in {"1", "true", "yes", "y", "t"}
+        last_assessed_text = str(normalised.get("last_assessed_at") or "").strip()
+        try:
+            last_assessed_at = parse_timestamp(last_assessed_text) or utcnow()
+        except ValueError:
+            errors.append(
+                ImportErrorRow(
+                    row=index,
+                    error=f"Invalid last_assessed_at '{last_assessed_text}'; use an ISO-8601 date.",
+                )
+            )
+            continue
 
         asset = Asset(
             organization_id=tenant.organization_id,
@@ -443,12 +454,16 @@ async def import_assets(
             asset_type=asset_type,
             environment=env or domain.Environment.PRODUCTION.value,
             business_unit=str(normalised.get("business_unit") or "").strip() or None,
-            criticality=_to_scale(normalised.get("criticality")),
-            data_sensitivity=_to_scale(normalised.get("data_sensitivity")),
-            internet_exposed=_truthy(normalised.get("internet_exposed")),
+            owner_id=owner.id if owner else None,
+            criticality=parse_scale(normalised.get("criticality")),
+            data_sensitivity=parse_scale(normalised.get("data_sensitivity")),
+            internet_exposed=str(normalised.get("internet_exposed") or "").strip().lower()
+            in {"1", "true", "yes", "y", "t"},
             financial_importance=financial_importance,
             currency=currency,
-            last_assessed_at=utcnow(),
+            dependencies=str(normalised.get("dependencies") or "").strip() or None,
+            existing_controls=str(normalised.get("existing_controls") or "").strip() or None,
+            last_assessed_at=last_assessed_at,
         )
         db.add(asset)
         created += 1

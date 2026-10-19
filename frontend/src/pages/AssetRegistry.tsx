@@ -343,7 +343,7 @@ export function AssetRegistryPage() {
           queryKey={['assets']}
           invalidateKeys={[['dashboard'], ['ai']]}
           title="Import assets from a CSV file"
-          description="Required columns: name and asset_type. Optional: asset_ref, description, environment, business_unit, criticality (1–5), data_sensitivity (1–5), internet_exposed, financial_importance and currency. Rows with a reference that already exists are reported rather than overwritten."
+          description="Required columns: name and asset_type. Optional: asset_ref, description, environment, business_unit, owner_email, criticality (1–5), data_sensitivity (1–5), internet_exposed, financial_importance (blank means not valued), currency, dependencies, existing_controls and last_assessed_at (ISO-8601; blank defaults to the import time). Rows with a reference that already exists are reported rather than overwritten."
         />
       ) : null}
     </div>

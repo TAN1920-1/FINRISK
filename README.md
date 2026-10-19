@@ -23,7 +23,7 @@ request is scoped to one. Nothing is shared between organizations.
 | :--- | :--- | :--- |
 | Backend | Python 3.12, FastAPI, SQLAlchemy 2, Pydantic v2 | REST API, scoring, authorization, audit trail |
 | Frontend | React 18, TypeScript 5.7, Vite 5, Tailwind 3 | Dashboard and data-entry UI |
-| Database | SQLite by default | Persistence; PostgreSQL supported in principle (see §8) |
+| Database | SQLite by default; PostgreSQL for hosted deployments | Persistence (see §8) |
 | Auth | JWT (HS256, PyJWT) + Argon2id password hashing | Sessions, tenant scoping, roles |
 | ML (optional) | scikit-learn / joblib | Risk prioritisation model; degrades to a rule-based baseline |
 
@@ -200,18 +200,98 @@ npm run build       # typecheck + production build
 
 ## 8. Deployment
 
-### Frontend
+The recommended stack is **Vercel** (frontend) + **Render** (backend) + **Supabase**
+(PostgreSQL). The three parts are configured independently and can be deployed in
+either order, but the backend needs the frontend origin and the frontend needs the
+backend origin, so deploy the backend first.
+
+### 8.1 Database — Supabase
+
+1. Create a project at <https://supabase.com>. Note the database password.
+2. **Project settings → Database → Connection string → URI** and copy the
+   **Session pooler** string (host `aws-0-<region>.pooler.supabase.com`, port `5432`).
+   Use the session pooler rather than the transaction pooler (port `6543`): the
+   transaction pooler runs PgBouncer in transaction mode, which does not support the
+   prepared statements the driver uses.
+3. Replace `[YOUR-PASSWORD]` with the database password. The result is the value for
+   `DATABASE_URL`:
+
+   ```
+   postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+   ```
+
+No schema step is needed: the API creates its tables and applies migrations on first
+startup. `postgresql://` is rewritten to `postgresql+psycopg://` automatically, and
+`psycopg[binary]` is already in `backend/requirements.txt`.
+
+### 8.2 Backend — Render
+
+A [`render.yaml`](render.yaml) blueprint is included. Either:
+
+**Blueprint (recommended)** — in Render choose **New + → Blueprint**, point it at the
+repository, and it will read `render.yaml`. When prompted, fill in `DATABASE_URL` (the
+Supabase string above) and `CORS_ORIGINS` (the Vercel origin from §8.3).
+
+**Manual** — create a **Web Service** with:
+
+| Setting | Value |
+| :--- | :--- |
+| Root directory | `backend` |
+| Runtime | Python 3.12 |
+| Build command | `pip install -r requirements.txt` |
+| Start command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Health check path | `/api/health` |
+
+Environment variables:
+
+| Variable | Value |
+| :--- | :--- |
+| `ENVIRONMENT` | `production` |
+| `SECRET_KEY` | 48+ random bytes — Render can generate one; **required**, the app refuses to start in production without it |
+| `DATABASE_URL` | the Supabase connection string from §8.1 |
+| `CORS_ORIGINS` | the Vercel origin, e.g. `https://finrisk.vercel.app` |
+| `OSINT_LIVE_CHECKS` | `false` to make no outbound calls |
+
+The `backend/Dockerfile` may be used instead of the native Python runtime (build context
+is the **repository root**). No disk is required: with `SECRET_KEY` and `DATABASE_URL`
+set, the only two filesystem writers (the dev signing key and optional ML artifacts) are
+both unused.
+
+### 8.3 Frontend — Vercel
+
+1. In Vercel choose **Add New → Project** and import the repository.
+2. Set **Root Directory** to `frontend`. Vercel detects Vite; the committed
+   [`frontend/vercel.json`](frontend/vercel.json) sets the build command
+   (`npm run build`), the output directory (`dist`) and a catch-all rewrite to
+   `index.html` so client-side routes such as `/risks/:id` survive a hard refresh.
+3. Add a **build-time** environment variable pointing at the Render service:
+
+   ```
+   VITE_API_BASE_URL = https://finrisk-api.onrender.com
+   ```
+
+   It is read at build time, so redeploy after changing it.
+4. Deploy, then copy the resulting origin into the backend's `CORS_ORIGINS`
+   (§8.2) and redeploy the backend.
+
+Because the frontend and API are on different origins, the browser sends a CORS
+preflight; `CORS_ORIGINS` must name the exact Vercel origin (scheme + host, no trailing
+slash).
+
+### 8.4 Local / self-hosted alternatives
+
+Build the frontend and serve the static bundle from any host:
 
 ```bash
 cd frontend
 npm run build
 ```
 
-This typechecks first, then emits a static bundle to `frontend/dist/`. Serve it from any
-static host. Set `VITE_API_BASE_URL` at build time if the API is not on the same origin;
-leave it empty and reverse-proxy `/api` to the backend if it is.
+This typechecks first, then emits a static bundle to `frontend/dist/`. Leave
+`VITE_API_BASE_URL` empty and reverse-proxy `/api` to the backend if both share one
+origin.
 
-### Backend
+Run the backend directly:
 
 ```bash
 cd backend
@@ -245,14 +325,13 @@ Checklist before exposing an instance:
 
 ### PostgreSQL
 
-`DATABASE_URL` accepts any SQLAlchemy URL, and the schema is portable, but **no
-PostgreSQL driver is installed by default**. Add one before switching:
+`DATABASE_URL` accepts any SQLAlchemy URL and the schema is portable.
+`psycopg[binary]` is a runtime dependency (`backend/requirements.txt`), and a plain
+`postgresql://` URL is rewritten to `postgresql+psycopg://` on load, so no further
+driver step is required. `backend/Dockerfile` also installs `libpq5`.
 
-```bash
-pip install "psycopg[binary]"
-```
-
-`backend/Dockerfile` installs `libpq5` so only the Python driver is missing.
+Point any SQLite deployment at PostgreSQL by setting `DATABASE_URL` and restarting;
+the API creates the schema and records the applied migrations on startup.
 
 ---
 
@@ -328,7 +407,7 @@ These are deliberate, documented boundaries — not outstanding bugs.
 * No email delivery: notifications are in-app only, and there is no password-reset flow.
   An administrator must set a new password.
 * SQLite is the default and is fine for a single instance. A multi-worker or multi-host
-  deployment should move to PostgreSQL **and install a driver** (see §8).
+  deployment should move to PostgreSQL by setting `DATABASE_URL` (see §8).
 * Rate limiting is in-process (a sliding window held in memory), so it is per-worker and
   resets on restart. A reverse proxy or shared store should enforce the real limit at
   the edge.

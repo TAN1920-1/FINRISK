@@ -1,0 +1,38 @@
+# Render blueprint for the FinRisk AI API.
+#
+# The frontend is deployed separately on Vercel as a static Vite build; this
+# file describes only the FastAPI web service.
+#
+# Deploy: push this repository, then in Render choose "New +" -> "Blueprint"
+# and point it at the repository. Secrets marked `sync: false` are prompted for
+# in the dashboard and are never stored in version control.
+services:
+  - type: web
+    name: finrisk-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Production guard rails: no auto-generated signing key, no open
+      # registration, no demo data (see backend/app/config.py).
+      - key: ENVIRONMENT
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      # Generated once by Render and reused across deploys so sessions survive.
+      - key: SECRET_KEY
+        generateValue: true
+      # Supabase PostgreSQL connection string. Set in the dashboard, e.g.
+      # postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+      - key: DATABASE_URL
+        sync: false
+      # The deployed Vercel origin, e.g. https://finrisk.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+      # No outbound scanning calls from the hosted instance by default.
+      - key: OSINT_LIVE_CHECKS
+        value: "false"

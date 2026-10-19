@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Upload } from 'lucide-react';
 import { ApiError, api } from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
 import { formatDate, formatMoney, formatPercent, humanise, toOptions } from '@/lib/format';
@@ -27,6 +27,7 @@ import { ActiveFilters, FilterBar, FilterSelect, SearchInput } from '@/component
 import { NoticeBanner } from '@/components/ui/Feedback';
 import { Checkbox, Field, FormErrorSummary, Input, Select, Textarea } from '@/components/ui/Form';
 import { ConfirmDialog, Dialog } from '@/components/ui/Dialog';
+import { CSVImportDialog } from '@/components/ui/CSVImportDialog';
 import { MethodologyPanel } from '@/components/ui/Methodology';
 
 /**
@@ -52,6 +53,7 @@ export function MitigationPlansPage() {
   const queryClient = useQueryClient();
 
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<Mitigation | null>(null);
   const [values, setValues] = useState<MitigationFormValues>(EMPTY_MITIGATION_FORM);
   const [errors, setErrors] = useState<MitigationFormErrors>({});
@@ -193,9 +195,18 @@ export function MitigationPlansPage() {
         }
         actions={
           writable ? (
-            <Button variant="primary" icon={<Plus className="h-3.5 w-3.5" aria-hidden />} onClick={openCreate}>
-              New action
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                icon={<Upload className="h-3.5 w-3.5" aria-hidden />}
+                onClick={() => setImportOpen(true)}
+              >
+                Import CSV
+              </Button>
+              <Button variant="primary" icon={<Plus className="h-3.5 w-3.5" aria-hidden />} onClick={openCreate}>
+                New action
+              </Button>
+            </>
           ) : null
         }
       />
@@ -363,6 +374,18 @@ export function MitigationPlansPage() {
             />
           ) : null}
         </Dialog>
+      ) : null}
+
+      {writable ? (
+        <CSVImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          endpoint="/api/mitigations/import"
+          queryKey={['mitigations']}
+          invalidateKeys={[['dashboard'], ['ai']]}
+          title="Import remediation actions from a CSV file"
+          description="Required columns: risk_ref (must match a risk in the register) and description. Optional: action_ref, priority, owner_email, due_date, estimated_cost, currency, status, expected_risk_reduction (0–1), evidence and completion_notes. Rows with a reference that already exists are reported rather than overwritten."
+        />
       ) : null}
 
       <Dialog

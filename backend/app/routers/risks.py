@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation
+from decimal import InvalidOperation
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, Response, UploadFile, status
@@ -42,7 +42,17 @@ from ..schemas import (
 )
 from ..scoring.risk_scoring import expected_exposure_from_scenarios
 from ..serializers import assessment_out, evidence_out, mitigation_out, risk_out
-from ..services.common import build_page, next_reference, ordered
+from ..services.common import (
+    build_page,
+    next_reference,
+    ordered,
+    parse_date,
+    parse_money,
+    parse_optional_scale,
+    parse_scale,
+    parse_share,
+    parse_timestamp,
+)
 
 router = APIRouter(prefix="/api/risks", tags=["risks"])
 
@@ -87,17 +97,6 @@ SCENARIO_COLUMNS: tuple[str, ...] = (
 )
 
 
-def _money(raw: object) -> Optional[Decimal]:
-    """Parse a money cell into 2-decimal currency; blank stays ``None``."""
-    text = str(raw or "").strip().replace(",", "")
-    if not text:
-        return None
-    amount = Decimal(text)
-    if amount < 0:
-        raise ValueError(text)
-    return amount.quantize(Decimal("0.01"))
-
-
 def _number(raw: object) -> Optional[float]:
     """Parse a non-negative plain number; blank stays ``None``."""
     text = str(raw or "").strip()
@@ -105,17 +104,6 @@ def _number(raw: object) -> Optional[float]:
         return None
     value = float(text)
     if value < 0:
-        raise ValueError(text)
-    return value
-
-
-def _share(raw: object, default: Optional[float] = None) -> Optional[float]:
-    """Parse a 0-1 probability; blank falls back to ``default``."""
-    text = str(raw or "").strip()
-    if not text:
-        return default
-    value = float(text)
-    if not 0.0 <= value <= 1.0:
         raise ValueError(text)
     return value
 
@@ -154,18 +142,18 @@ def _scenario_payload(
             "assumptions": str(normalised.get("assumptions") or "").strip() or None,
             "currency": currency,
             "time_horizon_months": int(horizon) if horizon else 12,
-            "probability": _share(normalised.get("probability"), 0.1),
-            "residual_probability": _share(normalised.get("residual_probability")),
-            "direct_loss": _money(normalised.get("direct_loss")),
-            "revenue_loss": _money(normalised.get("revenue_loss")),
+            "probability": parse_share(normalised.get("probability"), 0.1),
+            "residual_probability": parse_share(normalised.get("residual_probability")),
+            "direct_loss": parse_money(normalised.get("direct_loss")),
+            "revenue_loss": parse_money(normalised.get("revenue_loss")),
             "downtime_hours": _number(normalised.get("downtime_hours")),
-            "downtime_cost_per_hour": _money(normalised.get("downtime_cost_per_hour")),
-            "recovery_cost": _money(normalised.get("recovery_cost")),
-            "incident_response_cost": _money(normalised.get("incident_response_cost")),
-            "regulatory_cost": _money(normalised.get("regulatory_cost")),
-            "other_cost": _money(normalised.get("other_cost")),
-            "insurance_recovery": _money(normalised.get("insurance_recovery")),
-            "mitigation_cost": _money(normalised.get("mitigation_cost")),
+            "downtime_cost_per_hour": parse_money(normalised.get("downtime_cost_per_hour")),
+            "recovery_cost": parse_money(normalised.get("recovery_cost")),
+            "incident_response_cost": parse_money(normalised.get("incident_response_cost")),
+            "regulatory_cost": parse_money(normalised.get("regulatory_cost")),
+            "other_cost": parse_money(normalised.get("other_cost")),
+            "insurance_recovery": parse_money(normalised.get("insurance_recovery")),
+            "mitigation_cost": parse_money(normalised.get("mitigation_cost")),
         }
     except (InvalidOperation, ValueError):
         return None, "A scenario column holds a value outside its permitted range."
@@ -726,7 +714,17 @@ async def import_risks(
 
     Required columns: ``title``, ``category``.
     Optional: ``risk_ref``, ``description``, ``asset_ref``, ``likelihood`` (1-5),
-    ``impact`` (1-5), ``status``, ``business_unit``, ``owner_email``.
+    ``impact`` (1-5), ``status``, ``business_unit``, ``owner_email``,
+    ``evidence_quality`` (none/low/medium/high/verified), ``due_date`` (ISO-8601),
+    ``residual_likelihood`` and ``residual_impact`` (1-5; both are required before
+    a residual score can be computed), ``source``, ``threat_scenario``,
+    ``financial_impact_assumptions``, ``existing_controls`` and ``mitigation_plan``.
+
+    ``created_at`` and ``closed_at`` are accepted so that a historical register can
+    be loaded without every row landing on the import date; a value with no
+    timezone offset is read as UTC, and a row that leaves them blank is stamped
+    with the import time.  ``closed_at`` defaults to the import time for rows
+    whose status is ``resolved`` or ``closed``.
 
     A row that also fills in any loss-scenario column (see ``SCENARIO_COLUMNS``)
     creates the linked ``FinancialScenario`` as well, so the expected exposure on
@@ -835,13 +833,6 @@ async def import_risks(
                 errors.append(ImportErrorRow(row=index, error=f"Unknown owner_email '{owner_email}'."))
                 continue
 
-        def _to_scale(val, default=3):
-            try:
-                v = int(float(str(val or "").strip()))
-                return v if 1 <= v <= 5 else default
-            except (ValueError, TypeError):
-                return default
-
         risk_status = str(normalised.get("status") or "").strip().lower()
         if risk_status:
             try:
@@ -849,6 +840,45 @@ async def import_risks(
             except ValueError:
                 errors.append(ImportErrorRow(row=index, error=f"Unknown status '{risk_status}'."))
                 continue
+
+        evidence_quality = (
+            str(normalised.get("evidence_quality") or "").strip().lower()
+            or domain.EvidenceQuality.MEDIUM.value
+        )
+        try:
+            domain.EvidenceQuality(evidence_quality)
+        except ValueError:
+            errors.append(
+                ImportErrorRow(row=index, error=f"Unknown evidence_quality '{evidence_quality}'.")
+            )
+            continue
+
+        try:
+            due_date = parse_date(normalised.get("due_date"))
+            residual_likelihood = parse_optional_scale(normalised.get("residual_likelihood"))
+            residual_impact = parse_optional_scale(normalised.get("residual_impact"))
+            created_at = parse_timestamp(normalised.get("created_at"))
+            closed_at = parse_timestamp(normalised.get("closed_at"))
+        except ValueError:
+            errors.append(
+                ImportErrorRow(
+                    row=index,
+                    error=(
+                        "Invalid date or residual score. Use an ISO-8601 date, and whole "
+                        "numbers from 1 to 5 for residual_likelihood and residual_impact."
+                    ),
+                )
+            )
+            continue
+
+        if (residual_likelihood is None) != (residual_impact is None):
+            errors.append(
+                ImportErrorRow(
+                    row=index,
+                    error="Residual likelihood and impact must be supplied together.",
+                )
+            )
+            continue
 
         scenario_payload, scenario_error = _scenario_payload(normalised, title)
         if scenario_error:
@@ -869,24 +899,37 @@ async def import_risks(
                 risk_ref = f"RSK-{int(risk_ref.split('-')[-1]) + 1:04d}"
         taken_refs.add(risk_ref.lower())
 
+        is_closed = risk_status in (
+            domain.RiskStatus.RESOLVED.value,
+            domain.RiskStatus.CLOSED.value,
+        )
+        created_at = created_at or utcnow()
+
         risk = Risk(
             organization_id=tenant.organization_id,
             risk_ref=risk_ref,
             title=title[:250],
             description=str(normalised.get("description") or "").strip() or None,
             category=category,
+            source=str(normalised.get("source") or "").strip() or None,
             asset_id=asset.id if asset else None,
             owner_id=owner.id if owner else None,
             business_unit=str(normalised.get("business_unit") or "").strip() or None,
-            likelihood=_to_scale(normalised.get("likelihood")),
-            impact=_to_scale(normalised.get("impact")),
-            status=risk_status or domain.RiskStatus.IDENTIFIED.value,
-            evidence_quality=domain.EvidenceQuality.MEDIUM.value,
-            closed_at=(
-                utcnow()
-                if risk_status in (domain.RiskStatus.RESOLVED.value, domain.RiskStatus.CLOSED.value)
-                else None
+            threat_scenario=str(normalised.get("threat_scenario") or "").strip() or None,
+            likelihood=parse_scale(normalised.get("likelihood")),
+            impact=parse_scale(normalised.get("impact")),
+            financial_impact_assumptions=(
+                str(normalised.get("financial_impact_assumptions") or "").strip() or None
             ),
+            existing_controls=str(normalised.get("existing_controls") or "").strip() or None,
+            mitigation_plan=str(normalised.get("mitigation_plan") or "").strip() or None,
+            residual_likelihood=residual_likelihood,
+            residual_impact=residual_impact,
+            status=risk_status or domain.RiskStatus.IDENTIFIED.value,
+            evidence_quality=evidence_quality,
+            due_date=due_date,
+            created_at=created_at,
+            closed_at=closed_at or (utcnow() if is_closed else None),
         )
         db.add(risk)
         db.flush()
@@ -897,6 +940,7 @@ async def import_risks(
                 organization_id=tenant.organization_id,
                 risk_id=risk.id,
                 assessor_id=tenant.user.id,
+                assessed_at=created_at,
                 method=domain.AssessmentMethod.RULES.value,
                 likelihood=risk.likelihood,
                 impact=risk.impact,

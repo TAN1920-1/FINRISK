@@ -28,19 +28,36 @@ logger = logging.getLogger("finrisk.db")
 LEGACY_DB_PATH = BACKEND_DIR / "tilt_data.db"
 DATA_DIR = BACKEND_DIR / "data"
 
+
+def _normalise_database_url(url: str) -> str:
+    """Select the installed PostgreSQL driver explicitly.
+
+    A managed provider (Supabase, Neon, Render) hands out a plain
+    ``postgresql://`` URL, which SQLAlchemy resolves to psycopg2.  Only the
+    psycopg v3 driver is installed (see ``requirements.txt``), so the scheme is
+    rewritten to ``postgresql+psycopg`` rather than failing at connect time.
+    """
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
+DATABASE_URL = _normalise_database_url(settings.database_url)
+
 _connect_args: dict[str, object] = {}
-if settings.database_url.startswith("sqlite"):
+if DATABASE_URL.startswith("sqlite"):
     _connect_args = {"check_same_thread": False}
 
 engine: Engine = sa.create_engine(
-    settings.database_url,
+    DATABASE_URL,
     echo=settings.sql_echo,
     future=True,
     pool_pre_ping=True,
     connect_args=_connect_args,
 )
 
-if settings.database_url.startswith("sqlite"):
+if DATABASE_URL.startswith("sqlite"):
 
     @event.listens_for(engine, "connect")
     def _enable_sqlite_foreign_keys(dbapi_connection, _record):  # pragma: no cover - driver hook
@@ -81,8 +98,14 @@ def session_scope() -> Iterator[Session]:
 
 
 def _migration_0001_initial_schema(conn: sa.Connection) -> None:
-    """Create every table declared on the ORM metadata (idempotent)."""
-    Base.metadata.create_all(bind=engine)
+    """Create every table declared on the ORM metadata (idempotent).
+
+    The migration connection is reused rather than the module engine so the
+    whole run stays in one transaction.  Reusing the engine instead would open a
+    second connection that cannot see the not-yet-committed migration ledger on
+    PostgreSQL and would try to create it a second time.
+    """
+    Base.metadata.create_all(bind=conn)
 
 
 def _migration_0002_questionnaire_templates(conn: sa.Connection) -> None:
@@ -221,21 +244,30 @@ MIGRATIONS: list[tuple[str, str, Callable[[sa.Connection], None]]] = [
 ]
 
 
+def _ensure_ledger_table(conn: sa.Connection) -> None:
+    """Create the migration ledger in a dialect-portable way.
+
+    SQLAlchemy is used to declare the table rather than raw SQL because the
+    original DDL (``INTEGER PRIMARY KEY AUTOINCREMENT`` with a ``DATETIME``
+    column) is SQLite-only and is rejected by PostgreSQL.
+    """
+    sa.Table(
+        "schema_migrations",
+        sa.MetaData(),
+        sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+        sa.Column("revision", sa.String(60), nullable=False, unique=True),
+        sa.Column("applied_at", sa.DateTime, nullable=False),
+        sa.Column("note", sa.String(255)),
+    ).create(bind=conn, checkfirst=True)
+
+
 def run_migrations(bind: Optional[Engine] = None) -> list[str]:
     """Apply pending migrations and return the revisions applied this run."""
     target = bind or engine
     applied: list[str] = []
 
     with target.begin() as conn:
-        conn.execute(
-            sa.text(
-                "CREATE TABLE IF NOT EXISTS schema_migrations ("
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                "revision VARCHAR(60) NOT NULL UNIQUE, "
-                "applied_at DATETIME NOT NULL, "
-                "note VARCHAR(255))"
-            )
-        )
+        _ensure_ledger_table(conn)
         done = {
             row[0]
             for row in conn.execute(sa.text("SELECT revision FROM schema_migrations")).fetchall()
