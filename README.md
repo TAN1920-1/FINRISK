@@ -214,7 +214,9 @@ backend origin, so deploy the backend first.
    transaction pooler runs PgBouncer in transaction mode, which does not support the
    prepared statements the driver uses.
 3. Replace `[YOUR-PASSWORD]` with the database password. The result is the value for
-   `DATABASE_URL`:
+   `DATABASE_URL`. **Important:** If your password contains special characters like
+   `@`, `:`, `/` or `#`, you MUST URL-encode them (e.g., `@` becomes `%40`, `:`
+   becomes `%3a`).
 
    ```
    postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
@@ -248,7 +250,7 @@ Environment variables:
 | :--- | :--- |
 | `ENVIRONMENT` | `production` |
 | `SECRET_KEY` | 48+ random bytes — Render can generate one; **required**, the app refuses to start in production without it |
-| `DATABASE_URL` | the Supabase connection string from §8.1 |
+| `DATABASE_URL` | the Supabase connection string from §8.1 (ensure special characters are URL-encoded) |
 | `CORS_ORIGINS` | the Vercel origin, e.g. `https://finrisk.vercel.app` |
 | `OSINT_LIVE_CHECKS` | `false` to make no outbound calls |
 
