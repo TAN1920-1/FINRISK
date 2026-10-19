@@ -20,7 +20,7 @@
 
 import type { ApiErrorBody } from '@/types/api';
 
-const RAW_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').trim();
+const RAW_BASE = (import.meta.env.BASE_URL ?? '').trim();
 
 /** Base URL without a trailing slash. Empty string means "same origin". */
 export const API_BASE_URL = RAW_BASE.replace(/\/+$/, '');
@@ -234,7 +234,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     if ((error as Error)?.name === 'AbortError') throw error;
     throw new ApiError(
       0,
-      'Could not reach the API. Check that the backend is running and that VITE_API_BASE_URL points at it.',
+      'Could not reach the API. Check that the backend is running and that BASE_URL points at it.',
       { payload: error },
     );
   }
