@@ -159,6 +159,8 @@ def unlock_db(password: str) -> dict[str, Any]:
     if not password:
         raise ValueError('Password required')
 
+    # Strip any surrounding whitespace from the provided password to avoid false mismatches
+    password = password.strip()
     if KEY_PATH.exists():
         stored_hash = KEY_PATH.read_text().strip()
         if not _pwd_context.verify(password, stored_hash):
