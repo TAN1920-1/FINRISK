@@ -43,7 +43,6 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, password_hash: str) -> bool:
     """Constant-time-ish verification that never raises on malformed hashes."""
     try:
-        # Argon2's ``verify`` expects the stored hash first, then the candidate password.
         return _hasher.verify(password_hash, password)
     except (VerifyMismatchError, VerificationError, InvalidHashError):
         return False
