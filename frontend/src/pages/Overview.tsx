@@ -1,18 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowRight,
-  CalendarClock,
+  ChevronRight,
   FileBarChart2,
+  Info,
   RefreshCw,
   ShieldAlert,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
-import { formatDateTime, formatMoney, formatRelative, humanise, toOptions } from '@/lib/format';
+import { formatDateTime, formatMoney, formatRelative, humanise } from '@/lib/format';
 import { useListState } from '@/hooks/useListState';
 import { useAuth } from '@/app/AuthProvider';
-import type { Dashboard, KpiValue, Mitigation, Risk, RiskMeta } from '@/types/api';
+import type { Dashboard, KpiValue, Risk } from '@/types/api';
 import { cn } from '@/lib/cn';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { Button } from '@/components/ui/Button';
@@ -22,12 +22,9 @@ import { DataTable } from '@/components/ui/DataTable';
 import type { Column } from '@/components/ui/DataTable';
 import {
   AreaTrendChart,
-  CategoryBarChart,
-  ChartCard,
   DonutChart,
 } from '@/components/ui/Charts';
-import { ActiveFilters, DateRangeFilter, FilterBar, FilterSelect } from '@/components/ui/Filters';
-import { CardSkeleton, EmptyState, ErrorState, NoticeBanner } from '@/components/ui/Feedback';
+import { CardSkeleton, ErrorState } from '@/components/ui/Feedback';
 import { MethodologyPanel } from '@/components/ui/Methodology';
 
 /**
@@ -41,7 +38,7 @@ import { MethodologyPanel } from '@/components/ui/Methodology';
  * range the backend cannot honour is offered.
  */
 export function OverviewPage() {
-  const { user, activeOrganization, can } = useAuth();
+  const { user, role, activeOrganization, can } = useAuth();
   const navigate = useNavigate();
 
   const list = useListState({
@@ -55,12 +52,6 @@ export function OverviewPage() {
       api.get<Dashboard>('/api/dashboard', {
         query: list.query as Record<string, string>,
       }),
-  });
-
-  const meta = useQuery({
-    queryKey: queryKeys.riskMeta,
-    queryFn: () => api.get<RiskMeta>('/api/risks/meta'),
-    staleTime: 5 * 60_000,
   });
 
   if (dashboard.isPending) {
@@ -96,14 +87,6 @@ export function OverviewPage() {
   const activeRange =
     RANGE_PRESETS.find((preset) => preset.days !== null && startDate === isoDaysAgo(preset.days))?.id ??
     (startDate ? 'custom' : 'all');
-  const isFiltered = Boolean(
-    list.state.search ||
-      startDate ||
-      list.state.filters.end_date ||
-      list.state.filters.category ||
-      list.state.filters.severity ||
-      list.state.filters.business_unit,
-  );
 
   const applyRange = (days: number | null) =>
     list.setFilters({ start_date: days === null ? '' : isoDaysAgo(days), end_date: '' });
@@ -117,7 +100,7 @@ export function OverviewPage() {
               SECURE TERMINAL ACTIVE • {data.organization.reporting_period_label || 'Q3 2025 REPORTING PERIOD'}
             </p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
-              Welcome back, {user?.role === 'admin' ? 'Chief Risk Officer' : firstName}
+              Welcome back, {role === 'admin' ? 'Chief Risk Officer' : firstName}
             </h1>
             <p className="mt-1 text-[13px] text-muted-foreground">
               Last synchronized telemetry analysis: Today, {formatDateTime(data.generated_at).split(',')[1].trim()}
@@ -290,12 +273,6 @@ const RANGE_PRESETS: Array<{ id: string; label: string; days: number | null }> =
   { id: 'all', label: 'All time', days: null },
 ];
 
-const DATA_STATE: Record<Dashboard['data_state'], { label: string; className: string }> = {
-  empty: { label: 'No records', className: 'bg-surface-muted text-muted' },
-  demo_only: { label: 'Demo data', className: 'bg-warning/12 text-warning' },
-  populated: { label: 'Live data', className: 'bg-success/12 text-success' },
-};
-
 const SEVERITY_DOT: Record<string, string> = {
   critical: 'bg-risk-critical',
   high: 'bg-risk-high',
@@ -303,13 +280,6 @@ const SEVERITY_DOT: Record<string, string> = {
   low: 'bg-risk-low',
   unknown: 'bg-risk-unknown',
 };
-
-function greeting(date = new Date()): string {
-  const hour = date.getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
-}
 
 /** Local-time ISO date, `days` before today. */
 function isoDaysAgo(days: number): string {

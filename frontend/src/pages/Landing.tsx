@@ -1,11 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   ShieldCheck,
   Zap,
   BarChart3,
   Globe,
   ArrowRight,
-  ChevronRight,
   Shield,
   Activity,
   Lock,
@@ -19,6 +18,8 @@ import { Button } from '@/components/ui/Button';
  * manage financial and operational risks with intelligence.
  */
 export function LandingPage() {
+  const navigate = useNavigate();
+
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
       {/* Navigation */}
@@ -36,8 +37,8 @@ export function LandingPage() {
             <Link to="/login" className="text-sm font-medium text-muted hover:text-foreground">
               Sign in
             </Link>
-            <Button variant="primary" size="sm" asChild>
-              <Link to="/register">Start using</Link>
+            <Button variant="primary" size="sm" onClick={() => navigate('/register')}>
+              Start using
             </Button>
           </div>
         </div>
@@ -57,13 +58,14 @@ export function LandingPage() {
                 to model, analyze, and mitigate complex organizational risks in real-time.
               </p>
               <div className="mt-10 flex items-center justify-center gap-4">
-                <Button size="lg" variant="primary" asChild>
-                  <Link to="/register" className="gap-2">
-                    Get Started <ArrowRight className="h-4 w-4" />
-                  </Link>
+                <Button size="lg" variant="primary" onClick={() => navigate('/register')} className="gap-2">
+                  Get Started <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <a href="#how-it-works">Learn more</a>
+                <Button size="lg" variant="outline" onClick={() => {
+                  const el = document.getElementById('how-it-works');
+                  el?.scrollIntoView({ behavior: 'smooth' });
+                }}>
+                  Learn more
                 </Button>
               </div>
             </div>
@@ -201,11 +203,21 @@ export function LandingPage() {
               Join leading organizations using FinRisk AI to transform uncertainty into intelligence.
             </p>
             <div className="mt-10 flex items-center justify-center gap-4">
-              <Button size="lg" variant="secondary" asChild className="bg-surface text-foreground hover:bg-surface-muted border-none">
-                <Link to="/register">Create Organization</Link>
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={() => navigate('/register')}
+                className="bg-surface text-foreground hover:bg-surface-muted border-none"
+              >
+                Create Organization
               </Button>
-              <Button size="lg" variant="outline" asChild className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
-                <Link to="/login">Sign In</Link>
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate('/login')}
+                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                Sign In
               </Button>
             </div>
           </div>

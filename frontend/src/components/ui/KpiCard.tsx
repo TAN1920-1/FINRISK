@@ -1,70 +1,35 @@
 import type { ReactNode } from 'react';
 import {
-  Activity,
-  AlertTriangle,
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
-  Banknote,
-  Boxes,
-  Bug,
-  CalendarClock,
-  ClipboardList,
-  Clock,
-  Flame,
-  Gauge,
-  Globe,
-  Info,
-  Layers3,
-  Percent,
-  PiggyBank,
-  ShieldAlert,
-  ShieldX,
-  TrendingDown,
-  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatNumber } from '@/lib/format';
 import type { KpiValue } from '@/types/api';
 
-type KpiTone = 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
-
-const TONE_STYLES: Record<KpiTone, { icon: string; bar: string; stroke: string }> = {
-  primary: { icon: 'bg-primary/12 text-primary', bar: 'bg-primary/50', stroke: 'hsl(var(--primary))' },
-  secondary: {
-    icon: 'bg-secondary/12 text-secondary',
-    bar: 'bg-secondary/50',
-    stroke: 'hsl(var(--secondary))',
-  },
-  success: { icon: 'bg-success/12 text-success', bar: 'bg-success/50', stroke: 'hsl(var(--success))' },
-  warning: { icon: 'bg-warning/12 text-warning', bar: 'bg-warning/50', stroke: 'hsl(var(--warning))' },
-  danger: { icon: 'bg-danger/12 text-danger', bar: 'bg-danger/50', stroke: 'hsl(var(--danger))' },
-};
+export type KpiTone = 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
 
 /**
- * Tone and icon per KPI key.
- *
- * The tone is a property of what the metric *means* — critical counts read as
- * danger, overdue counts as warning, money as the blue analytical accent — so
- * the same metric is coloured the same way on every screen.
+ * Mapping of KPI keys to their visual metadata.
  */
-const KPI_META: Record<string, { icon: LucideIcon; tone: KpiTone }> = {
-  total_risks: { icon: Layers3, tone: 'primary' },
-  open_risks: { icon: ShieldAlert, tone: 'primary' },
-  critical_risks: { icon: Flame, tone: 'danger' },
-  high_risks: { icon: AlertTriangle, tone: 'warning' },
-  overdue_risks: { icon: Clock, tone: 'warning' },
-  expected_gross_exposure: { icon: Banknote, tone: 'secondary' },
-  expected_residual_exposure: { icon: PiggyBank, tone: 'secondary' },
-  potential_avoided_loss: { icon: TrendingDown, tone: 'success' },
-  expected_loss_reduction_pct: { icon: Percent, tone: 'success' },
-  open_findings: { icon: Bug, tone: 'primary' },
-  critical_findings: { icon: ShieldX, tone: 'danger' },
-  assets_total: { icon: Boxes, tone: 'primary' },
-  assets_internet_exposed: { icon: Globe, tone: 'warning' },
-  mitigations_open: { icon: ClipboardList, tone: 'primary' },
-  mitigations_overdue: { icon: CalendarClock, tone: 'warning' },
-  risks_created_30d: { icon: Activity, tone: 'secondary' },
+export const KPI_META: Record<string, { tone: KpiTone }> = {
+  total_risks: { tone: 'primary' },
+  open_risks: { tone: 'secondary' },
+  critical_risks: { tone: 'danger' },
+  high_risks: { tone: 'warning' },
+  overdue_risks: { tone: 'danger' },
+  expected_gross_exposure: { tone: 'danger' },
+  expected_residual_exposure: { tone: 'warning' },
+  potential_avoided_loss: { tone: 'success' },
+  expected_loss_reduction_pct: { tone: 'success' },
+  open_findings: { tone: 'secondary' },
+  critical_findings: { tone: 'danger' },
+  assets_total: { tone: 'primary' },
+  assets_internet_exposed: { tone: 'warning' },
+  mitigations_open: { tone: 'secondary' },
+  mitigations_overdue: { tone: 'danger' },
+  risks_created_30d: { tone: 'primary' },
 };
 
 /**
@@ -87,7 +52,6 @@ export function KpiCard({
   className?: string;
 }) {
   const display = formatKpiValue(kpi);
-  const meta = KPI_META[kpi.key] ?? { tone: 'primary' as KpiTone };
   const points = series && series.length >= 2 ? series : undefined;
 
   return (
@@ -164,18 +128,6 @@ function Sparkline({ points, stroke }: { points: number[]; stroke: string }) {
   );
 }
 
-function formatKpiValue(kpi: KpiValue): string {
-  const unit = (kpi.unit ?? '').toLowerCase();
-  if (unit === 'currency' || kpi.currency) {
-    return new Intl.NumberFormat('en-US', {
-      notation: Math.abs(kpi.value) >= 1_000_000 ? 'compact' : 'standard',
-      maximumFractionDigits: Math.abs(kpi.value) >= 1_000_000 ? 1 : 0,
-    }).format(kpi.value);
-  }
-  if (unit === 'percent') return `${kpi.value.toFixed(1)}%`;
-  return formatNumber(kpi.value, { maximumFractionDigits: Number.isInteger(kpi.value) ? 0 : 1 });
-}
-
 export function TrendIndicator({
   value,
   className,
@@ -227,4 +179,16 @@ export function SectionHeading({
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
+}
+
+function formatKpiValue(kpi: KpiValue): string {
+  const unit = (kpi.unit ?? '').toLowerCase();
+  if (unit === 'currency' || kpi.currency) {
+    return new Intl.NumberFormat('en-US', {
+      notation: Math.abs(kpi.value) >= 1_000_000 ? 'compact' : 'standard',
+      maximumFractionDigits: Math.abs(kpi.value) >= 1_000_000 ? 1 : 0,
+    }).format(kpi.value);
+  }
+  if (unit === 'percent') return `${kpi.value.toFixed(1)}%`;
+  return formatNumber(kpi.value, { maximumFractionDigits: Number.isInteger(kpi.value) ? 0 : 1 });
 }

@@ -2,15 +2,12 @@ import {
   Activity,
   Bot,
   Boxes,
-  ClipboardList,
   FileBarChart,
   Gauge,
   History,
-  Layers,
   PieChart,
   Settings,
   ShieldAlert,
-  ShieldCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 

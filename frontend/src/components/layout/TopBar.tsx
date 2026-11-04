@@ -1,11 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Calendar, ChevronRight, Menu } from 'lucide-react';
-import { NAV_GROUPS, findNavItem } from '@/app/navigation';
 import { GlobalSearch } from './GlobalSearch';
-import { OrganizationSelector } from './OrganizationSelector';
 import { NotificationsMenu } from './NotificationsMenu';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
+import { findNavItem } from '@/app/navigation';
 
 /**
  * Top bar.

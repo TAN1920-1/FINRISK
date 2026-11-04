@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { LandingPage } from '@/pages/Landing';
 import { LoginPage } from '@/pages/Login';
