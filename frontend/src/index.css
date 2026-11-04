@@ -8,63 +8,80 @@
   Two themes, one set of names.  A component never names a raw colour; it asks
   for `bg-surface` or `text-muted`, so the light and dark variants stay in sync
   and an accessible contrast ratio only has to be verified once per token.
+
+  The dark theme is the primary identity: a deep navy foundation with an
+  electric-teal accent and an intelligence-blue secondary.  These are not free
+  choices — teal reads as "signal/health" and blue as "analysis", which is what
+  the two colours label throughout the product.
 */
 
 @layer base {
   :root {
-    /* Light: white and soft neutral grey, restrained blue primary. */
-    --canvas: 210 20% 98%;
+    /* Light: white surfaces on a cool neutral canvas, teal/blue accents
+       darkened so text and icons keep their contrast on a pale background. */
+    --canvas: 210 30% 97%;
     --surface: 0 0% 100%;
-    --surface-muted: 210 20% 96%;
+    --surface-muted: 210 24% 95%;
     --surface-raised: 0 0% 100%;
-    --border: 214 18% 88%;
-    --border-strong: 214 16% 76%;
-    --foreground: 222 34% 14%;
+    --border: 214 22% 88%;
+    --border-strong: 214 18% 74%;
+    --foreground: 215 42% 15%;
     --muted-foreground: 215 16% 42%;
-    --primary: 217 76% 42%;
+    --primary: 174 78% 30%;
     --primary-foreground: 0 0% 100%;
-    --primary-muted: 214 90% 95%;
-    --secondary: 178 68% 32%;
+    --primary-muted: 174 62% 93%;
+    --secondary: 225 82% 56%;
     --secondary-foreground: 0 0% 100%;
-    --accent: 214 90% 95%;
-    --ring: 217 76% 52%;
-    --danger: 0 68% 46%;
-    --sidebar: 222 40% 16%;
+    --accent: 214 85% 96%;
+    --ring: 174 78% 36%;
+    --danger: 0 70% 48%;
+    --success: 153 50% 34%;
+    --warning: 38 88% 40%;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 215 42% 15%;
+    --sidebar-muted: 215 16% 46%;
+    --sidebar-active: 210 40% 96%;
 
     /* Risk bands.  Chosen to stay distinguishable without relying on hue alone:
        they are also labelled and shown with a numeric score everywhere. */
-    --risk-critical: 0 72% 42%;
-    --risk-high: 24 86% 44%;
-    --risk-medium: 40 88% 40%;
-    --risk-low: 152 58% 32%;
-    --risk-unknown: 215 12% 50%;
+    --risk-critical: 0 74% 44%;
+    --risk-high: 22 84% 44%;
+    --risk-medium: 38 88% 38%;
+    --risk-low: 153 52% 30%;
+    --risk-unknown: 214 12% 48%;
   }
 
   .dark {
-    /* Dark: deep navy / slate, same accents lifted for contrast on dark surfaces. */
-    --canvas: 222 44% 9%;
-    --surface: 222 38% 13%;
-    --surface-muted: 222 34% 17%;
-    --surface-raised: 222 36% 16%;
-    --border: 220 24% 24%;
-    --border-strong: 220 22% 34%;
-    --foreground: 210 32% 96%;
-    --muted-foreground: 215 18% 66%;
-    --primary: 214 88% 62%;
-    --primary-foreground: 222 47% 11%;
-    --primary-muted: 217 44% 22%;
-    --secondary: 174 62% 45%;
-    --secondary-foreground: 222 47% 11%;
-    --accent: 217 38% 22%;
-    --ring: 214 88% 62%;
-    --danger: 0 74% 62%;
-    --sidebar: 222 46% 7%;
+    /* Dark: the deep navy foundation (#101C2C through #20354B), same accents
+       lifted for contrast on dark surfaces. */
+    --canvas: 214 47% 12%;
+    --surface: 213 44% 17%;
+    --surface-muted: 215 47% 15%;
+    --surface-raised: 211 40% 21%;
+    --border: 212 29% 24%;
+    --border-strong: 213 34% 31%;
+    --foreground: 216 33% 97%;
+    --muted-foreground: 212 23% 73%;
+    --primary: 173 68% 54%;
+    --primary-foreground: 213 44% 12%;
+    --primary-muted: 173 38% 20%;
+    --secondary: 225 100% 70%;
+    --secondary-foreground: 214 47% 12%;
+    --accent: 213 40% 24%;
+    --ring: 173 68% 54%;
+    --danger: 0 82% 67%;
+    --success: 153 53% 53%;
+    --warning: 40 90% 61%;
+    --sidebar: 215 52% 9%;
+    --sidebar-foreground: 210 30% 93%;
+    --sidebar-muted: 212 16% 62%;
+    --sidebar-active: 213 42% 18%;
 
-    --risk-critical: 0 78% 62%;
-    --risk-high: 26 90% 58%;
-    --risk-medium: 42 92% 58%;
-    --risk-low: 152 56% 48%;
-    --risk-unknown: 215 14% 56%;
+    --risk-critical: 0 80% 62%;
+    --risk-high: 22 88% 58%;
+    --risk-medium: 40 90% 56%;
+    --risk-low: 153 48% 46%;
+    --risk-unknown: 212 16% 56%;
   }
 
   * {
@@ -91,7 +108,7 @@
   }
 
   ::selection {
-    background: hsl(var(--primary) / 0.25);
+    background: hsl(var(--primary) / 0.28);
   }
 
   /* Thin, unobtrusive scrollbars for the dense table views. */
@@ -106,6 +123,11 @@
     border: 3px solid transparent;
     background-clip: content-box;
   }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.6);
+    background-clip: content-box;
+  }
 }
 
 @layer components {
@@ -113,8 +135,22 @@
     @apply absolute left-3 top-3 z-50 -translate-y-16 rounded bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-transform focus-visible:translate-y-0;
   }
 
+  /* Card surface. One definition so every panel in the product shares the same
+     border, radius and elevation. */
   .card {
-    @apply rounded-lg border border-border bg-surface shadow-card;
+    @apply rounded-xl border border-border bg-surface shadow-card;
+  }
+
+  /* Opt-in lift for cards that are themselves interactive. */
+  .card-interactive {
+    @apply transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-border-strong hover:shadow-raised;
+  }
+
+  /* The signature backdrop: a restrained radial glow behind a page hero. */
+  .hero-surface {
+    background-image:
+      radial-gradient(120% 140% at 0% 0%, hsl(var(--primary) / 0.14), transparent 55%),
+      radial-gradient(90% 120% at 100% 0%, hsl(var(--secondary) / 0.12), transparent 50%);
   }
 
   .skeleton {

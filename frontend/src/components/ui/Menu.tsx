@@ -84,7 +84,7 @@ export function Dropdown({
           role="menu"
           aria-label={label}
           className={cn(
-            'absolute z-40 mt-1 overflow-hidden rounded-lg border border-border bg-surface shadow-raised animate-fade-in',
+            'absolute z-40 mt-1 overflow-hidden rounded-xl border border-border bg-surface shadow-raised animate-fade-in',
             align === 'right' ? 'right-0' : 'left-0',
             width,
             panelClassName,

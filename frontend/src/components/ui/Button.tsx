@@ -7,13 +7,13 @@ export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-primary-foreground hover:brightness-110 active:brightness-95 disabled:bg-primary/50',
+    'bg-primary text-primary-foreground shadow-card hover:brightness-110 active:brightness-95 disabled:bg-primary/50 disabled:shadow-none',
   secondary:
-    'bg-surface-muted text-foreground border border-border hover:border-border-strong disabled:opacity-60',
+    'bg-surface-muted text-foreground border border-border hover:border-border-strong hover:bg-surface disabled:opacity-60',
   outline:
     'border border-border-strong bg-transparent text-foreground hover:bg-surface-muted disabled:opacity-60',
   ghost: 'bg-transparent text-muted hover:bg-surface-muted hover:text-foreground disabled:opacity-60',
-  danger: 'bg-danger text-white hover:brightness-110 disabled:opacity-60',
+  danger: 'bg-danger text-white shadow-card hover:brightness-110 disabled:opacity-60 disabled:shadow-none',
 };
 
 const SIZES: Record<ButtonSize, string> = {
@@ -41,7 +41,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'inline-flex select-none items-center rounded font-medium transition-[background-color,border-color,color,filter] disabled:cursor-not-allowed',
+        'inline-flex select-none items-center rounded-lg font-medium transition-[background-color,border-color,color,filter,box-shadow] duration-150 disabled:cursor-not-allowed',
         VARIANTS[variant],
         SIZES[size],
         className,

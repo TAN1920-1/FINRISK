@@ -103,7 +103,7 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className={cn('flex flex-col items-start gap-3 rounded border border-danger/40 bg-danger/5 p-4', className)}
+      className={cn('flex flex-col items-start gap-3 rounded-lg border border-danger/40 bg-danger/5 p-4', className)}
     >
       <div className="flex items-start gap-2">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" aria-hidden />
@@ -135,12 +135,12 @@ export function NoticeBanner({
 }) {
   const styles = {
     info: 'border-primary/30 bg-primary-muted text-foreground',
-    warning: 'border-risk-medium/40 bg-risk-medium/10 text-foreground',
+    warning: 'border-warning/40 bg-warning/10 text-foreground',
     danger: 'border-danger/40 bg-danger/5 text-foreground',
   }[tone];
 
   return (
-    <div className={cn('rounded border p-3 text-xs', styles, className)}>
+    <div className={cn('rounded-lg border p-3 text-xs', styles, className)}>
       {title ? <p className="font-medium">{title}</p> : null}
       <div className={cn(title && 'mt-1', 'text-muted')}>{children}</div>
     </div>

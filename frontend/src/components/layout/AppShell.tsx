@@ -1,10 +1,20 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { findNavItem } from '@/app/navigation';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+
+const COLLAPSE_KEY = 'finrisk.sidebar.collapsed';
+
+function readCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(COLLAPSE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Application shell.
@@ -16,6 +26,7 @@ import { TopBar } from './TopBar';
  */
 export function AppShell({ children }: { children?: ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => readCollapsed());
   const location = useLocation();
 
   // A navigation from the mobile drawer must not leave the drawer covering the
@@ -23,6 +34,18 @@ export function AppShell({ children }: { children?: ReactNode }) {
   useEffect(() => {
     setNavOpen(false);
   }, [location.pathname]);
+
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((value) => {
+      const next = !value;
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, String(next));
+      } catch {
+        // The rail simply will not remember the choice across reloads.
+      }
+      return next;
+    });
+  }, []);
 
   const activeItem = findNavItem(location.pathname);
 
@@ -32,7 +55,12 @@ export function AppShell({ children }: { children?: ReactNode }) {
         Skip to content
       </a>
 
-      <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
+      <Sidebar
+        open={navOpen}
+        onClose={() => setNavOpen(false)}
+        collapsed={collapsed}
+        onToggleCollapsed={toggleCollapsed}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar onOpenNav={() => setNavOpen(true)} />

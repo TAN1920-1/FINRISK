@@ -7,6 +7,8 @@ export type BadgeTone =
   | 'neutral'
   | 'primary'
   | 'secondary'
+  | 'success'
+  | 'warning'
   | 'critical'
   | 'high'
   | 'medium'
@@ -17,6 +19,8 @@ const TONES: Record<BadgeTone, string> = {
   neutral: 'border-border bg-surface-muted text-muted',
   primary: 'border-primary/30 bg-primary-muted text-primary',
   secondary: 'border-secondary/30 bg-secondary/10 text-secondary',
+  success: 'border-success/40 bg-success/10 text-success',
+  warning: 'border-warning/40 bg-warning/10 text-warning',
   critical: 'border-risk-critical/40 bg-risk-critical/10 text-risk-critical',
   high: 'border-risk-high/40 bg-risk-high/10 text-risk-high',
   medium: 'border-risk-medium/40 bg-risk-medium/15 text-risk-medium',
@@ -39,7 +43,7 @@ export function Badge({
     <span
       title={title}
       className={cn(
-        'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide',
+        'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-2xs font-medium uppercase tracking-wide',
         TONES[tone],
         className,
       )}
@@ -164,6 +168,8 @@ export function LegendSwatch({ tone, label }: { tone: BadgeTone; label: string }
     neutral: 'bg-border-strong',
     primary: 'bg-primary',
     secondary: 'bg-secondary',
+    success: 'bg-success',
+    warning: 'bg-warning',
   }[tone];
   return (
     <span className="inline-flex items-center gap-1.5 text-2xs text-muted">

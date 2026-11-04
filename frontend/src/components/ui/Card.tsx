@@ -1,19 +1,25 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
-  return <section className={cn('card', className)} {...rest} />;
+export function Card({
+  className,
+  interactive = false,
+  ...rest
+}: HTMLAttributes<HTMLDivElement> & { interactive?: boolean }) {
+  return <section className={cn('card', interactive && 'card-interactive', className)} {...rest} />;
 }
 
 export function CardHeader({
   title,
   description,
   actions,
+  icon,
   className,
 }: {
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  icon?: ReactNode;
   className?: string;
 }) {
   return (
@@ -23,9 +29,12 @@ export function CardHeader({
         className,
       )}
     >
-      <div className="min-w-0">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
-        {description ? <p className="mt-0.5 text-xs text-muted">{description}</p> : null}
+      <div className="flex min-w-0 items-start gap-2.5">
+        {icon ? <span className="mt-0.5 shrink-0 text-primary">{icon}</span> : null}
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+          {description ? <p className="mt-0.5 text-xs text-muted">{description}</p> : null}
+        </div>
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
     </header>

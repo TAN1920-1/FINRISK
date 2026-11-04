@@ -32,6 +32,9 @@ export interface NavGroup {
 /**
  * The eleven required sections, plus the preserved TILT vendor-assessment
  * module. Grouped so the sidebar stays readable at eleven-plus entries.
+ * Settings is deliberately excluded here and rendered separately at the foot
+ * of the sidebar, so account and organization controls never sit among the
+ * analytical sections.
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
@@ -128,17 +131,6 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: 'audit:read',
       },
       {
-        to: '/settings',
-        label: 'Settings',
-        icon: Settings,
-        hint: 'Organization, members, roles and your own account',
-      },
-    ],
-  },
-  {
-    label: 'Preserved modules',
-    items: [
-      {
         to: '/vendor-assessments',
         label: 'Vendor Assessments',
         icon: Layers,
@@ -149,7 +141,18 @@ export const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((group) => group.items);
+/** Pinned to the foot of the sidebar, below the analytical sections. */
+export const SETTINGS_NAV_ITEM: NavItem = {
+  to: '/settings',
+  label: 'Settings',
+  icon: Settings,
+  hint: 'Organization, members, roles and your own account',
+};
+
+export const ALL_NAV_ITEMS: NavItem[] = [
+  ...NAV_GROUPS.flatMap((group) => group.items),
+  SETTINGS_NAV_ITEM,
+];
 
 /** Longest-prefix match so `/risks/12` still highlights "Risk Intelligence". */
 export function findNavItem(pathname: string): NavItem | undefined {

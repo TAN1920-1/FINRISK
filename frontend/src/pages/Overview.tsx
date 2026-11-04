@@ -1,20 +1,31 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, ShieldAlert } from 'lucide-react';
+import {
+  ArrowRight,
+  CalendarClock,
+  FileBarChart2,
+  RefreshCw,
+  ShieldAlert,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { queryKeys } from '@/lib/queryClient';
 import { formatDateTime, formatMoney, formatRelative, humanise, toOptions } from '@/lib/format';
 import { useListState } from '@/hooks/useListState';
 import { useAuth } from '@/app/AuthProvider';
 import type { Dashboard, KpiValue, Mitigation, Risk, RiskMeta } from '@/types/api';
-import { PageHeader } from '@/components/ui/PageHeader';
+import { cn } from '@/lib/cn';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { SeverityBadge, StatusBadge } from '@/components/ui/Badge';
 import { DataTable } from '@/components/ui/DataTable';
 import type { Column } from '@/components/ui/DataTable';
-import { CategoryBarChart, ChartCard, TrendLineChart } from '@/components/ui/Charts';
+import {
+  AreaTrendChart,
+  CategoryBarChart,
+  ChartCard,
+  DonutChart,
+} from '@/components/ui/Charts';
 import { ActiveFilters, DateRangeFilter, FilterBar, FilterSelect } from '@/components/ui/Filters';
 import { CardSkeleton, EmptyState, ErrorState, NoticeBanner } from '@/components/ui/Feedback';
 import { MethodologyPanel } from '@/components/ui/Methodology';
@@ -24,10 +35,13 @@ import { MethodologyPanel } from '@/components/ui/Methodology';
  *
  * Every figure on this screen is a value the API computed from stored records.
  * The screen never derives a total of its own, which is why the KPI grid renders
- * whatever the endpoint returns rather than a hand-picked list of numbers.
+ * whatever the endpoint returns rather than a hand-picked list of numbers. A
+ * sparkline is only drawn when the endpoint supplied a real series for that
+ * metric, and the reporting period is the same date filter the API applies — no
+ * range the backend cannot honour is offered.
  */
 export function OverviewPage() {
-  const { activeOrganization, can } = useAuth();
+  const { user, activeOrganization, can } = useAuth();
   const navigate = useNavigate();
 
   const list = useListState({
@@ -52,7 +66,7 @@ export function OverviewPage() {
   if (dashboard.isPending) {
     return (
       <div className="space-y-4">
-        <PageHeader title="Overview" description="Loading the organization's risk posture…" />
+        <CardSkeleton lines={3} />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <CardSkeleton key={index} lines={1} />
@@ -75,37 +89,60 @@ export function OverviewPage() {
 
   const data = dashboard.data;
   const currency = activeOrganization?.currency ?? data.organization.currency ?? 'USD';
+  const firstName = (user?.full_name ?? '').trim().split(/\s+/)[0] || user?.email || 'there';
+  const severityTotal = data.risks_by_severity.reduce((sum, point) => sum + point.value, 0);
+  const createdSeries = data.risks_created_vs_resolved.points.map((point) => point.value);
+  const startDate = list.state.filters.start_date ?? '';
+  const activeRange =
+    RANGE_PRESETS.find((preset) => preset.days !== null && startDate === isoDaysAgo(preset.days))?.id ??
+    (startDate ? 'custom' : 'all');
   const isFiltered = Boolean(
     list.state.search ||
-      list.state.filters.start_date ||
+      startDate ||
       list.state.filters.end_date ||
       list.state.filters.category ||
       list.state.filters.severity ||
       list.state.filters.business_unit,
   );
 
+  const applyRange = (days: number | null) =>
+    list.setFilters({ start_date: days === null ? '' : isoDaysAgo(days), end_date: '' });
+
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="Overview"
-        description={
-          <>
-            Organization-wide posture for <span className="text-foreground">{data.organization.name}</span>.
-            Figures are computed from stored records; financial values are documented estimates.
-          </>
-        }
-        meta={
-          <>
-            <span className="text-2xs text-muted">Generated {formatDateTime(data.generated_at)}</span>
-            {data.organization.reporting_period_label ? (
-              <span className="text-2xs text-muted">
-                Reporting period: {data.organization.reporting_period_label}
+      <section className="card hero-surface relative overflow-hidden p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">
+              {data.organization.name}
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+              {greeting()}, {firstName}
+            </h1>
+            <p className="mt-1 max-w-2xl text-xs text-muted">
+              Here is the current risk posture across the organization. Figures are computed from
+              stored records; financial values are documented estimates, not predictions.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-2xs text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarClock className="h-3.5 w-3.5" aria-hidden />
+                Reporting period: {data.organization.reporting_period_label ?? 'All time'}
               </span>
-            ) : null}
-          </>
-        }
-        actions={
-          <>
+              <span className="inline-flex items-center gap-1.5">
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                Last calculated {formatDateTime(data.generated_at)}
+              </span>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 font-medium',
+                  DATA_STATE[data.data_state].className,
+                )}
+              >
+                {DATA_STATE[data.data_state].label}
+              </span>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button
               variant="outline"
               icon={<ShieldAlert className="h-3.5 w-3.5" aria-hidden />}
@@ -114,13 +151,17 @@ export function OverviewPage() {
               Open risk register
             </Button>
             {can('report:read') ? (
-              <Button variant="primary" onClick={() => navigate('/reports')}>
+              <Button
+                variant="primary"
+                icon={<FileBarChart2 className="h-3.5 w-3.5" aria-hidden />}
+                onClick={() => navigate('/reports')}
+              >
                 Generate a report
               </Button>
             ) : null}
-          </>
-        }
-      />
+          </div>
+        </div>
+      </section>
 
       {data.data_state === 'empty' ? (
         <NoticeBanner tone="info" title="No records yet">
@@ -148,14 +189,37 @@ export function OverviewPage() {
 
       <section aria-label="Key indicators" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {data.kpis.map((kpi: KpiValue) => (
-          <KpiCard key={kpi.key} kpi={kpi} />
+          <KpiCard
+            key={kpi.key}
+            kpi={kpi}
+            series={kpi.key === 'risks_created_30d' ? createdSeries : undefined}
+          />
         ))}
       </section>
 
       <Card>
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-4 py-2.5">
+          <span className="mr-1 text-2xs font-medium uppercase tracking-wide text-muted">Period</span>
+          {RANGE_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              aria-pressed={activeRange === preset.id}
+              onClick={() => applyRange(preset.days)}
+              className={cn(
+                'rounded-md px-2 py-0.5 text-2xs font-medium transition-colors',
+                activeRange === preset.id
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-muted hover:bg-surface-muted hover:text-foreground',
+              )}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
         <FilterBar>
           <DateRangeFilter
-            startDate={list.state.filters.start_date ?? ''}
+            startDate={startDate}
             endDate={list.state.filters.end_date ?? ''}
             onChange={(range) =>
               list.setFilters({ start_date: range.startDate, end_date: range.endDate })
@@ -210,14 +274,42 @@ export function OverviewPage() {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
         <ChartCard
-          title="Open risks by severity"
-          description="Counts follow the documented likelihood x impact bands."
-          empty={data.risks_by_severity.length === 0}
+          title="Risk distribution"
+          description="Share of in-scope risks by severity band."
+          empty={severityTotal === 0}
           emptyMessage="No risks match the current filters."
+          height={220}
         >
-          <CategoryBarChart data={data.risks_by_severity} colourBySeverity />
+          <div className="flex h-full items-center gap-4 px-2">
+            <div className="h-full w-36 shrink-0">
+              <DonutChart
+                data={data.risks_by_severity}
+                centreValue={severityTotal}
+                centreLabel="risks"
+                colourBySeverity
+                showLegend={false}
+              />
+            </div>
+            <ul className="min-w-0 flex-1 space-y-2">
+              {data.risks_by_severity.map((point) => (
+                <li key={point.label} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={cn('h-2 w-2 shrink-0 rounded-full', SEVERITY_DOT[point.label] ?? 'bg-muted')}
+                      aria-hidden
+                    />
+                    <span className="truncate capitalize text-foreground">{humanise(point.label)}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-muted">
+                    <span className="text-foreground">{point.value}</span>
+                    {severityTotal > 0 ? ` · ${Math.round((point.value / severityTotal) * 100)}%` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </ChartCard>
 
         <ChartCard
@@ -225,23 +317,26 @@ export function OverviewPage() {
           description="Where the register's exposure is concentrated."
           empty={data.risks_by_category.length === 0}
           emptyMessage="No risks match the current filters."
+          className="lg:col-span-2"
         >
           <CategoryBarChart data={data.risks_by_category} />
         </ChartCard>
+      </div>
 
-        <ChartCard
-          title="Risks raised vs closed"
-          description="Twelve-month view of records created and resolved."
-          empty={data.risks_created_vs_resolved.points.length === 0}
-          className="lg:col-span-2"
-        >
-          <TrendLineChart
-            data={data.risks_created_vs_resolved.points}
-            primaryLabel={data.risks_created_vs_resolved.name || 'Raised'}
-            secondaryLabel="Resolved"
-          />
-        </ChartCard>
+      <ChartCard
+        title="Risks raised vs closed"
+        description="Twelve-month view of records created and resolved."
+        empty={data.risks_created_vs_resolved.points.every((point) => point.value === 0 && !point.secondary)}
+        emptyMessage="No risk activity in the last twelve months."
+      >
+        <AreaTrendChart
+          data={data.risks_created_vs_resolved.points}
+          primaryLabel={data.risks_created_vs_resolved.name || 'Raised'}
+          secondaryLabel="Resolved"
+        />
+      </ChartCard>
 
+      <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard
           title={`Expected exposure by business unit (${currency})`}
           description="Sum of expected loss from scenarios linked to each unit."
@@ -373,6 +468,45 @@ export function OverviewPage() {
       />
     </div>
   );
+}
+
+/** Quick reporting-period presets. Each maps to the API's own date filter. */
+const RANGE_PRESETS: Array<{ id: string; label: string; days: number | null }> = [
+  { id: '30d', label: '30D', days: 30 },
+  { id: '90d', label: '90D', days: 90 },
+  { id: '6m', label: '6M', days: 182 },
+  { id: '1y', label: '1Y', days: 365 },
+  { id: 'all', label: 'All time', days: null },
+];
+
+const DATA_STATE: Record<Dashboard['data_state'], { label: string; className: string }> = {
+  empty: { label: 'No records', className: 'bg-surface-muted text-muted' },
+  demo_only: { label: 'Demo data', className: 'bg-warning/12 text-warning' },
+  populated: { label: 'Live data', className: 'bg-success/12 text-success' },
+};
+
+const SEVERITY_DOT: Record<string, string> = {
+  critical: 'bg-risk-critical',
+  high: 'bg-risk-high',
+  medium: 'bg-risk-medium',
+  low: 'bg-risk-low',
+  unknown: 'bg-risk-unknown',
+};
+
+function greeting(date = new Date()): string {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+/** Local-time ISO date, `days` before today. */
+function isoDaysAgo(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function topRiskColumns(

@@ -27,6 +27,8 @@ export default {
         accent: 'hsl(var(--accent) / <alpha-value>)',
         ring: 'hsl(var(--ring) / <alpha-value>)',
         danger: 'hsl(var(--danger) / <alpha-value>)',
+        success: 'hsl(var(--success) / <alpha-value>)',
+        warning: 'hsl(var(--warning) / <alpha-value>)',
         // Risk bands. One hue per severity so a reader can learn the mapping once.
         risk: {
           critical: 'hsl(var(--risk-critical) / <alpha-value>)',
@@ -35,10 +37,18 @@ export default {
           low: 'hsl(var(--risk-low) / <alpha-value>)',
           unknown: 'hsl(var(--risk-unknown) / <alpha-value>)',
         },
-        sidebar: 'hsl(var(--sidebar) / <alpha-value>)',
+        // Dedicated sidebar scale: the chrome can contrast with the page canvas
+        // (dark navy in dark mode, a pale rail in light mode) without either
+        // theme having to hard-code its own text colours.
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar) / <alpha-value>)',
+          foreground: 'hsl(var(--sidebar-foreground) / <alpha-value>)',
+          muted: 'hsl(var(--sidebar-muted) / <alpha-value>)',
+          active: 'hsl(var(--sidebar-active) / <alpha-value>)',
+        },
       },
       fontFamily: {
-        sans: ['Inter', 'Segoe UI', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'Geist', 'Segoe UI', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Consolas', 'monospace'],
       },
       fontSize: {
@@ -48,22 +58,38 @@ export default {
       borderRadius: {
         DEFAULT: '0.375rem',
         lg: '0.5rem',
+        xl: '0.75rem',
+        '2xl': '1rem',
       },
       boxShadow: {
-        card: '0 1px 2px 0 rgb(15 23 42 / 0.06), 0 1px 3px 0 rgb(15 23 42 / 0.08)',
-        raised: '0 8px 24px -12px rgb(15 23 42 / 0.35)',
+        card: '0 1px 2px 0 rgb(8 15 26 / 0.24), 0 1px 3px 0 rgb(8 15 26 / 0.18)',
+        raised: '0 12px 32px -16px rgb(4 10 20 / 0.55), 0 2px 6px -2px rgb(4 10 20 / 0.4)',
+        glow: '0 0 0 1px hsl(var(--primary) / 0.35), 0 0 24px -6px hsl(var(--primary) / 0.45)',
+      },
+      transitionTimingFunction: {
+        smooth: 'cubic-bezier(0.32, 0.72, 0, 1)',
       },
       keyframes: {
         'fade-in': {
           from: { opacity: '0', transform: 'translateY(2px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'fade-in-up': {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'grow-x': {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
       },
       animation: {
-        'fade-in': 'fade-in 120ms ease-out',
+        'fade-in': 'fade-in 140ms ease-out',
+        'fade-in-up': 'fade-in-up 220ms cubic-bezier(0.32, 0.72, 0, 1) both',
+        'grow-x': 'grow-x 500ms cubic-bezier(0.32, 0.72, 0, 1) both',
         shimmer: 'shimmer 1.6s infinite',
       },
     },

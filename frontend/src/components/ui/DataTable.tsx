@@ -87,7 +87,7 @@ export function DataTable<T>({
         <table className="w-full border-collapse text-sm">
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <thead>
-            <tr className="border-b border-border bg-surface-muted/60">
+            <tr className="border-b border-border bg-surface-muted">
               {columns.map((column) => {
                 const isSorted = sort?.sort === column.sortKey;
                 const SortIcon = !isSorted ? ChevronsUpDown : sort?.order === 'asc' ? ArrowUp : ArrowDown;
@@ -100,7 +100,7 @@ export function DataTable<T>({
                       isSorted ? (sort?.order === 'asc' ? 'ascending' : 'descending') : undefined
                     }
                     className={cn(
-                      'whitespace-nowrap px-3 py-2 text-2xs font-semibold uppercase tracking-wide text-muted',
+                      'sticky top-0 z-[1] whitespace-nowrap bg-surface-muted px-3 py-2.5 text-2xs font-semibold uppercase tracking-wide text-muted',
                       ALIGN[column.align ?? 'left'],
                       column.hideOnMobile && 'hidden md:table-cell',
                       column.className,

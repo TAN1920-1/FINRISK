@@ -19,7 +19,7 @@ import { cn } from '@/lib/cn';
  */
 
 const CONTROL_BASE =
-  'w-full rounded border bg-surface px-2.5 text-sm text-foreground placeholder:text-muted/70 transition-colors disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted';
+  'w-full rounded-lg border bg-surface px-2.5 text-sm text-foreground placeholder:text-muted/70 transition-colors disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted';
 
 const CONTROL_STATE = {
   normal: 'border-border hover:border-border-strong focus:border-primary',

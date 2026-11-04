@@ -27,9 +27,11 @@ function readStoredPreference(): ThemePreference {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
   } catch {
-    // Storage unavailable; fall through to the OS setting.
+    // Storage unavailable; fall through to the platform default.
   }
-  return 'system';
+  // Dark is the platform's default identity; a first-time visitor sees the
+  // product as designed rather than as their desktop happens to be configured.
+  return 'dark';
 }
 
 function systemPrefersDark(): boolean {
