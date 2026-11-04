@@ -153,6 +153,43 @@
       radial-gradient(90% 120% at 100% 0%, hsl(var(--secondary) / 0.12), transparent 50%);
   }
 
+  /*
+    Landing-page ambience. These are scoped to the public marketing surface and
+    are all token-driven, so they follow the navy/teal identity rather than
+    hard-coding a hex value that would drift from the product palette.
+  */
+  .landing-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.55) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.55) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 10%, transparent 78%);
+    mask-image: radial-gradient(ellipse 75% 55% at 50% 0%, #000 10%, transparent 78%);
+  }
+
+  /* A wide, very low-opacity teal/blue wash used behind the hero and final CTA. */
+  .landing-aurora {
+    background-image:
+      radial-gradient(closest-side, hsl(var(--primary) / 0.28), transparent),
+      radial-gradient(closest-side, hsl(var(--secondary) / 0.2), transparent);
+  }
+
+  /* Hover treatment shared by the marketing feature cards: a hairline that
+     brightens towards teal without ever becoming a full glowing border. */
+  .landing-card {
+    @apply relative overflow-hidden rounded-2xl border border-border bg-surface/70 transition-[border-color,transform,box-shadow] duration-300 ease-smooth hover:-translate-y-1 hover:border-primary/35 hover:shadow-raised;
+  }
+
+  .landing-card::after {
+    content: '';
+    @apply pointer-events-none absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-300;
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.7), transparent);
+  }
+
+  .landing-card:hover::after {
+    @apply opacity-100;
+  }
+
   .skeleton {
     @apply relative overflow-hidden rounded bg-surface-muted;
   }

@@ -85,12 +85,25 @@ export default {
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
+        // Landing-page ambience only. Deliberately slow and small in amplitude so
+        // the floating preview cards read as "alive" rather than animated.
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-8px)' },
+        },
+        'pulse-soft': {
+          '0%, 100%': { opacity: '0.45' },
+          '50%': { opacity: '0.8' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 140ms ease-out',
         'fade-in-up': 'fade-in-up 220ms cubic-bezier(0.32, 0.72, 0, 1) both',
         'grow-x': 'grow-x 500ms cubic-bezier(0.32, 0.72, 0, 1) both',
         shimmer: 'shimmer 1.6s infinite',
+        float: 'float 7s ease-in-out infinite',
+        'float-slow': 'float 11s ease-in-out infinite',
+        'pulse-soft': 'pulse-soft 6s ease-in-out infinite',
       },
     },
   },
