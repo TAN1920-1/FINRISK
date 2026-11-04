@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronRight, Menu } from 'lucide-react';
+import { Calendar, ChevronRight, Menu } from 'lucide-react';
 import { NAV_GROUPS, findNavItem } from '@/app/navigation';
 import { GlobalSearch } from './GlobalSearch';
 import { OrganizationSelector } from './OrganizationSelector';
@@ -18,12 +18,9 @@ import { UserMenu } from './UserMenu';
 export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
   const location = useLocation();
   const activeItem = findNavItem(location.pathname);
-  const activeGroup = activeItem
-    ? NAV_GROUPS.find((group) => group.items.some((item) => item.to === activeItem.to))
-    : undefined;
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-canvas/85 px-3 backdrop-blur-md sm:px-4">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-border bg-surface px-4 backdrop-blur-md">
       <button
         type="button"
         onClick={onOpenNav}
@@ -33,33 +30,28 @@ export function TopBar({ onOpenNav }: { onOpenNav: () => void }) {
         <Menu className="h-4 w-4" aria-hidden />
       </button>
 
-      <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1 text-xs md:flex">
-        <Link to="/overview" className="rounded text-muted transition-colors hover:text-foreground">
-          Overview
-        </Link>
-        {activeGroup ? (
-          <>
-            <ChevronRight className="h-3 w-3 shrink-0 text-muted/60" aria-hidden />
-            <span className="text-muted">{activeGroup.label}</span>
-          </>
-        ) : null}
-        {activeItem && activeItem.to !== '/overview' ? (
-          <>
-            <ChevronRight className="h-3 w-3 shrink-0 text-muted/60" aria-hidden />
-            <span className="truncate font-medium text-foreground" aria-current="page">
-              {activeItem.label}
-            </span>
-          </>
-        ) : null}
+      <nav aria-label="Breadcrumb" className="hidden items-center gap-2 text-[13px] md:flex">
+        <span className="text-muted">FinRisk</span>
+        <ChevronRight className="h-3 w-3 text-muted/40" aria-hidden />
+        <span className="font-semibold text-foreground">
+          {activeItem?.label || 'Dashboard'}
+        </span>
       </nav>
 
-      <GlobalSearch className="min-w-0 flex-1 md:max-w-xl" />
+      <div className="flex flex-1 justify-center">
+        <GlobalSearch className="w-full max-w-lg" />
+      </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        <OrganizationSelector />
-        <NotificationsMenu />
-        <ThemeToggle />
-        <UserMenu />
+      <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-[12px] font-medium text-muted md:flex">
+          <Calendar className="h-3.5 w-3.5" />
+          <span>YTD: Jan 01 - Present</span>
+        </div>
+        <div className="flex items-center gap-1.5 border-l border-border pl-3">
+          <NotificationsMenu />
+          <ThemeToggle />
+          <UserMenu />
+        </div>
       </div>
     </header>
   );

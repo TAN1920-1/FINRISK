@@ -116,7 +116,7 @@ export function GlobalSearch({ className }: { className?: string }) {
         type="search"
         value={term}
         aria-label="Search the register"
-        placeholder="Search risks, assets, findings…"
+        placeholder="Search markets, risks, assets..."
         onFocus={() => setOpen(true)}
         onChange={(event) => {
           setTerm(event.target.value);
@@ -131,7 +131,7 @@ export function GlobalSearch({ className }: { className?: string }) {
             go(`/risks?q=${encodeURIComponent(debounced)}`);
           }
         }}
-        className="h-9 w-full rounded border border-border bg-surface pl-8 pr-16 text-xs text-foreground placeholder:text-muted/70"
+        className="h-9 w-full rounded-lg border-none bg-surface-muted pl-8 pr-16 text-[13px] text-foreground placeholder:text-muted/60 focus:ring-1 focus:ring-primary/20"
       />
       {term ? (
         <button

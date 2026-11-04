@@ -62,9 +62,9 @@ export default {
         '2xl': '1rem',
       },
       boxShadow: {
-        card: '0 1px 2px 0 rgb(8 15 26 / 0.24), 0 1px 3px 0 rgb(8 15 26 / 0.18)',
-        raised: '0 12px 32px -16px rgb(4 10 20 / 0.55), 0 2px 6px -2px rgb(4 10 20 / 0.4)',
-        glow: '0 0 0 1px hsl(var(--primary) / 0.35), 0 0 24px -6px hsl(var(--primary) / 0.45)',
+        card: '0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05)',
+        raised: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+        glow: '0 0 0 1px hsl(var(--primary) / 0.2), 0 0 16px -4px hsl(var(--primary) / 0.3)',
       },
       transitionTimingFunction: {
         smooth: 'cubic-bezier(0.32, 0.72, 0, 1)',

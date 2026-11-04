@@ -19,28 +19,28 @@ export function AuthLayout({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <ShieldHalf className="h-5 w-5" aria-hidden />
-          </span>
-          <div className="leading-tight">
-            <p className="text-sm font-semibold text-foreground">FinRisk AI</p>
-            <p className="text-2xs uppercase tracking-widest text-muted">Risk intelligence</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas px-4 py-12">
+      <div className="w-full max-w-[420px]">
+        <div className="mb-10 flex flex-col items-center gap-4 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-glow">
+            <ShieldHalf className="h-6 w-6" aria-hidden />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">FinRisk AI</h1>
+            <p className="text-[13px] text-muted-foreground mt-1">Intelligence-Driven Risk Management</p>
           </div>
         </div>
 
-        <div className="card p-5 sm:p-6">
-          <h1 className="text-base font-semibold tracking-tight text-foreground">{title}</h1>
-          <p className="mt-1 text-xs text-muted">{description}</p>
-          <div className="mt-5">{children}</div>
+        <div className="card shadow-xl p-8 sm:p-10">
+          <h2 className="text-lg font-bold tracking-tight text-foreground">{title}</h2>
+          <p className="mt-1.5 text-[13px] text-muted-foreground">{description}</p>
+          <div className="mt-8">{children}</div>
         </div>
 
-        {footer ? <div className="mt-4 text-center text-xs text-muted">{footer}</div> : null}
+        {footer ? <div className="mt-6 text-center text-sm text-muted-foreground">{footer}</div> : null}
 
-        <p className="mt-6 text-center text-2xs leading-relaxed text-muted">
-          Scores and financial figures are documented decision support, not forecasts.
+        <p className="mt-10 text-center text-[11px] font-medium leading-relaxed text-muted-foreground/60 uppercase tracking-widest">
+          Decision Support • Institutional Grade • Secure Terminal
         </p>
       </div>
     </div>

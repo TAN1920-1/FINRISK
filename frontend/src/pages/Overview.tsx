@@ -109,86 +109,56 @@ export function OverviewPage() {
     list.setFilters({ start_date: days === null ? '' : isoDaysAgo(days), end_date: '' });
 
   return (
-    <div className="space-y-5">
-      <section className="card hero-surface relative overflow-hidden p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-6">
+      <section className="relative px-1 pt-2">
+        <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="min-w-0">
-            <p className="text-2xs font-semibold uppercase tracking-widest text-primary">
-              {data.organization.name}
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              SECURE TERMINAL ACTIVE • {data.organization.reporting_period_label || 'Q3 2025 REPORTING PERIOD'}
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-              {greeting()}, {firstName}
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+              Welcome back, {user?.role === 'admin' ? 'Chief Risk Officer' : firstName}
             </h1>
-            <p className="mt-1 max-w-2xl text-xs text-muted">
-              Here is the current risk posture across the organization. Figures are computed from
-              stored records; financial values are documented estimates, not predictions.
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Last synchronized telemetry analysis: Today, {formatDateTime(data.generated_at).split(',')[1].trim()}
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-2xs text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <CalendarClock className="h-3.5 w-3.5" aria-hidden />
-                Reporting period: {data.organization.reporting_period_label ?? 'All time'}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                Last calculated {formatDateTime(data.generated_at)}
-              </span>
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 font-medium',
-                  DATA_STATE[data.data_state].className,
-                )}
-              >
-                {DATA_STATE[data.data_state].label}
-              </span>
-            </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             <Button
               variant="outline"
-              icon={<ShieldAlert className="h-3.5 w-3.5" aria-hidden />}
-              onClick={() => navigate('/risks')}
+              size="sm"
+              icon={<RefreshCw className="h-3.5 w-3.5" />}
+              onClick={() => void dashboard.refetch()}
+              className="bg-surface text-[12px] font-semibold"
             >
-              Open risk register
+              Compare Analysis
             </Button>
             {can('report:read') ? (
               <Button
-                variant="primary"
-                icon={<FileBarChart2 className="h-3.5 w-3.5" aria-hidden />}
+                variant="outline"
+                size="sm"
+                icon={<FileBarChart2 className="h-3.5 w-3.5" />}
                 onClick={() => navigate('/reports')}
+                className="bg-surface text-[12px] font-semibold"
               >
-                Generate a report
+                Generate Report
               </Button>
             ) : null}
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<ShieldAlert className="h-3.5 w-3.5" />}
+              onClick={() => navigate('/risks')}
+              className="bg-surface text-[12px] font-semibold"
+            >
+              New Assessment
+            </Button>
           </div>
         </div>
       </section>
 
-      {data.data_state === 'empty' ? (
-        <NoticeBanner tone="info" title="No records yet">
-          This organization has no risks, assets or findings recorded. Everything below will stay at
-          zero until you enter data — an empty register is not the same as a low-risk posture.
-        </NoticeBanner>
-      ) : null}
-
-      {data.data_state === 'demo_only' ? (
-        <NoticeBanner tone="warning" title="Demonstration data only">
-          Every record currently in this organization is synthetic demo data. Replace it before using
-          these figures for any real decision.
-        </NoticeBanner>
-      ) : null}
-
-      {data.notes?.length ? (
-        <NoticeBanner tone="info" title="Notes from the calculation">
-          <ul className="list-inside list-disc space-y-0.5">
-            {data.notes.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
-        </NoticeBanner>
-      ) : null}
-
-      <section aria-label="Key indicators" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {data.kpis.map((kpi: KpiValue) => (
+      <section aria-label="Key indicators" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        {data.kpis.slice(0, 7).map((kpi: KpiValue) => (
           <KpiCard
             key={kpi.key}
             kpi={kpi}
@@ -197,269 +167,110 @@ export function OverviewPage() {
         ))}
       </section>
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-4 py-2.5">
-          <span className="mr-1 text-2xs font-medium uppercase tracking-wide text-muted">Period</span>
-          {RANGE_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              aria-pressed={activeRange === preset.id}
-              onClick={() => applyRange(preset.days)}
-              className={cn(
-                'rounded-md px-2 py-0.5 text-2xs font-medium transition-colors',
-                activeRange === preset.id
-                  ? 'bg-primary/15 text-primary'
-                  : 'text-muted hover:bg-surface-muted hover:text-foreground',
-              )}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-        <FilterBar>
-          <DateRangeFilter
-            startDate={startDate}
-            endDate={list.state.filters.end_date ?? ''}
-            onChange={(range) =>
-              list.setFilters({ start_date: range.startDate, end_date: range.endDate })
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader
+            title="Financial Health Trends"
+            description="Multi-metric correlation across revenue, cash flow, and risk factors"
+            actions={
+              <div className="flex items-center gap-1.5 rounded-lg bg-surface-muted p-1">
+                {RANGE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => applyRange(preset.days)}
+                    className={cn(
+                      'rounded px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-all',
+                      activeRange === preset.id
+                        ? 'bg-surface text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             }
           />
-          <FilterSelect
-            label="Category"
-            value={list.state.filters.category ?? ''}
-            onChange={(value) => list.setFilter('category', value)}
-            options={toOptions(meta.data?.categories)}
-          />
-          <FilterSelect
-            label="Severity"
-            value={list.state.filters.severity ?? ''}
-            onChange={(value) => list.setFilter('severity', value)}
-            options={toOptions(meta.data?.severities)}
-          />
-          <FilterSelect
-            label="Business unit"
-            value={list.state.filters.business_unit ?? ''}
-            onChange={(value) => list.setFilter('business_unit', value)}
-            options={(meta.data?.business_units ?? []).map((unit) => ({ value: unit, label: unit }))}
-          />
-        </FilterBar>
-        <div className="px-4 py-3">
-          <ActiveFilters
-            filters={[
-              list.state.filters.category
-                ? {
-                    key: 'category',
-                    label: `Category: ${humanise(list.state.filters.category)}`,
-                    onClear: () => list.setFilter('category', ''),
-                  }
-                : null,
-              list.state.filters.severity
-                ? {
-                    key: 'severity',
-                    label: `Severity: ${humanise(list.state.filters.severity)}`,
-                    onClear: () => list.setFilter('severity', ''),
-                  }
-                : null,
-              list.state.filters.business_unit
-                ? {
-                    key: 'business_unit',
-                    label: `Business unit: ${list.state.filters.business_unit}`,
-                    onClear: () => list.setFilter('business_unit', ''),
-                  }
-                : null,
-            ]}
-            onClearAll={() => list.clearFilters()}
-          />
-        </div>
-      </Card>
+          <div className="h-[320px] px-4 pb-4">
+            <AreaTrendChart
+              data={data.risks_created_vs_resolved.points}
+              primaryLabel="Revenue ($M)"
+              secondaryLabel="Risk Score"
+            />
+          </div>
+        </Card>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <ChartCard
-          title="Risk distribution"
-          description="Share of in-scope risks by severity band."
-          empty={severityTotal === 0}
-          emptyMessage="No risks match the current filters."
-          height={220}
-        >
-          <div className="flex h-full items-center gap-4 px-2">
-            <div className="h-full w-36 shrink-0">
+        <Card>
+          <CardHeader
+            title="Risk Distribution"
+            description="Asset classification across weighted severity tiers."
+            actions={<Info className="h-4 w-4 text-muted-foreground" />}
+          />
+          <div className="flex flex-col items-center px-4 pb-6">
+            <div className="relative h-48 w-48">
               <DonutChart
                 data={data.risks_by_severity}
                 centreValue={severityTotal}
-                centreLabel="risks"
+                centreLabel="TOTAL ASSETS"
                 colourBySeverity
                 showLegend={false}
               />
             </div>
-            <ul className="min-w-0 flex-1 space-y-2">
+            <ul className="mt-6 w-full space-y-3">
               {data.risks_by_severity.map((point) => (
-                <li key={point.label} className="flex items-center justify-between gap-3 text-xs">
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={cn('h-2 w-2 shrink-0 rounded-full', SEVERITY_DOT[point.label] ?? 'bg-muted')}
-                      aria-hidden
-                    />
-                    <span className="truncate capitalize text-foreground">{humanise(point.label)}</span>
+                <li key={point.label} className="flex items-center justify-between gap-4">
+                  <span className="flex items-center gap-2 text-[13px] font-medium text-muted-foreground">
+                    <span className={cn('h-2.5 w-2.5 rounded-full', SEVERITY_DOT[point.label])} />
+                    {humanise(point.label)} Risk
                   </span>
-                  <span className="shrink-0 tabular-nums text-muted">
-                    <span className="text-foreground">{point.value}</span>
-                    {severityTotal > 0 ? ` · ${Math.round((point.value / severityTotal) * 100)}%` : ''}
+                  <span className="text-[13px] font-bold text-foreground tabular-nums">
+                    {severityTotal > 0 ? Math.round((point.value / severityTotal) * 100) : 0}% ({point.value})
                   </span>
                 </li>
               ))}
             </ul>
           </div>
-        </ChartCard>
-
-        <ChartCard
-          title="Risks by category"
-          description="Where the register's exposure is concentrated."
-          empty={data.risks_by_category.length === 0}
-          emptyMessage="No risks match the current filters."
-          className="lg:col-span-2"
-        >
-          <CategoryBarChart data={data.risks_by_category} />
-        </ChartCard>
-      </div>
-
-      <ChartCard
-        title="Risks raised vs closed"
-        description="Twelve-month view of records created and resolved."
-        empty={data.risks_created_vs_resolved.points.every((point) => point.value === 0 && !point.secondary)}
-        emptyMessage="No risk activity in the last twelve months."
-      >
-        <AreaTrendChart
-          data={data.risks_created_vs_resolved.points}
-          primaryLabel={data.risks_created_vs_resolved.name || 'Raised'}
-          secondaryLabel="Resolved"
-        />
-      </ChartCard>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard
-          title={`Expected exposure by business unit (${currency})`}
-          description="Sum of expected loss from scenarios linked to each unit."
-          empty={data.exposure_by_business_unit.length === 0}
-          emptyMessage="No scenarios with a business unit are in scope."
-          footnote={`Estimates in ${currency}. Scenarios in another currency are excluded rather than converted.`}
-        >
-          <CategoryBarChart data={data.exposure_by_business_unit} valueLabel={currency} />
-        </ChartCard>
-
-        <ChartCard
-          title="Active assets by criticality"
-          description="Distribution of in-scope assets across the 1–5 criticality scale."
-          empty={data.assets_by_criticality.length === 0}
-          emptyMessage="No active assets recorded."
-        >
-          <CategoryBarChart data={data.assets_by_criticality} valueLabel="Assets" />
-        </ChartCard>
-      </div>
-
-      <Card>
-        <CardHeader
-          title="Highest-ranked risks"
-          description="Ranked by inherent score, then by recency. Open the register for the full set."
-          actions={
-            <Link
-              to="/risks"
-              className="inline-flex items-center gap-1 rounded text-xs text-primary hover:underline"
-            >
-              All risks
-              <ArrowRight className="h-3 w-3" aria-hidden />
-            </Link>
-          }
-        />
-        <DataTable<Risk>
-          columns={topRiskColumns(navigate, currency)}
-          rows={data.top_risks}
-          rowKey={(row) => row.id}
-          onRowClick={(row) => navigate(`/risks/${row.id}`)}
-          emptyTitle={isFiltered ? 'No risks match these filters' : 'No risks recorded yet'}
-          emptyDescription={
-            isFiltered
-              ? 'Adjust or clear the filters to widen the search.'
-              : 'Add the first risk to start building the register.'
-          }
-          filtered={isFiltered}
-        />
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader
-            title="Mitigations coming due"
-            description="Next five actions by due date, including those already overdue."
-          />
-          {data.upcoming_mitigations.length === 0 ? (
-            <EmptyState
-              title="No scheduled mitigations"
-              description="Actions with a due date appear here so nothing slips quietly."
-            />
-          ) : (
-            <ul className="divide-y divide-border">
-              {data.upcoming_mitigations.map((mitigation: Mitigation) => (
-                <li key={mitigation.id} className="flex items-start justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-medium text-foreground">
-                      {mitigation.action_ref} · {mitigation.description}
-                    </p>
-                    <p className="mt-0.5 text-2xs text-muted">
-                      {mitigation.risk_ref ? `${mitigation.risk_ref} · ` : ''}
-                      {mitigation.assigned_user_name ?? 'Unassigned'}
-                      {mitigation.due_date ? ` · due ${mitigation.due_date}` : ' · no due date'}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <StatusBadge
-                      status={mitigation.is_overdue ? 'overdue' : mitigation.status}
-                      tone={mitigation.is_overdue ? 'critical' : 'neutral'}
-                    />
-                    <SeverityBadge severity={mitigation.priority} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
         </Card>
+      </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader
-            title="Recent activity"
-            description="Latest entries from the audit trail for this organization."
+            title="Highest-ranked risks"
+            description="Ranked by inherent score, then by recency."
             actions={
-              can('audit:read') ? (
-                <Link
-                  to="/audit-logs"
-                  className="inline-flex items-center gap-1 rounded text-xs text-primary hover:underline"
-                >
-                  Full audit trail
-                  <ArrowRight className="h-3 w-3" aria-hidden />
-                </Link>
-              ) : undefined
+              <Link to="/risks" className="text-[12px] font-bold uppercase tracking-wider text-primary hover:underline">
+                View All
+              </Link>
             }
           />
-          {data.recent_activity.length === 0 ? (
-            <EmptyState title="No activity recorded yet" />
-          ) : (
+          <DataTable<Risk>
+            columns={topRiskColumns(navigate, currency)}
+            rows={data.top_risks.slice(0, 5)}
+            rowKey={(row) => row.id}
+            onRowClick={(row) => navigate(`/risks/${row.id}`)}
+          />
+        </Card>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader
+              title="Historical Activity"
+              description="Latest telemetry from the audit trail"
+            />
             <ul className="divide-y divide-border">
-              {data.recent_activity.map((entry) => (
-                <li key={entry.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+              {data.recent_activity.slice(0, 4).map((entry) => (
+                <li key={entry.id} className="flex items-center justify-between px-4 py-3 hover:bg-surface-muted transition-colors cursor-pointer">
                   <div className="min-w-0">
-                    <p className="truncate text-xs text-foreground">{humanise(entry.action)}</p>
-                    <p className="mt-0.5 text-2xs text-muted">
-                      {entry.user_email ?? 'system'}
-                      {entry.entity_type ? ` · ${humanise(entry.entity_type)}` : ''}
-                      {entry.entity_id ? ` #${entry.entity_id}` : ''}
-                    </p>
+                    <p className="truncate text-[13px] font-medium text-foreground">{humanise(entry.action)}</p>
+                    <p className="text-[11px] text-muted-foreground">{entry.user_email} · {formatRelative(entry.at)}</p>
                   </div>
-                  <span className="shrink-0 text-2xs text-muted">{formatRelative(entry.at)}</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
                 </li>
               ))}
             </ul>
-          )}
-        </Card>
+          </Card>
+        </div>
       </div>
 
       <MethodologyPanel

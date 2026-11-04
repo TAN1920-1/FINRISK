@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
+import { LandingPage } from '@/pages/Landing';
 import { LoginPage } from '@/pages/Login';
 import { RegisterPage } from '@/pages/Register';
 import { NotFoundPage } from '@/pages/NotFound';
@@ -29,29 +30,28 @@ import { VendorDetailPage } from '@/pages/VendorDetail';
  * sidebar keeps the correct entry highlighted.
  */
 export const router = createBrowserRouter([
+  { path: '/', element: <LandingPage /> },
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   {
-    path: '/',
     element: <ProtectedRoute />,
     children: [
-      { index: true, element: <Navigate to="/overview" replace /> },
-      { path: 'overview', element: <OverviewPage /> },
-      { path: 'ai-insights', element: <AiInsightsPage /> },
-      { path: 'risks', element: <RiskRegisterPage /> },
-      { path: 'risks/:riskId', element: <RiskDetailPage /> },
-      { path: 'financial-exposure', element: <FinancialExposurePage /> },
-      { path: 'risk-scenarios', element: <RiskScenariosPage /> },
-      { path: 'cybersecurity', element: <CybersecurityPage /> },
-      { path: 'cybersecurity/:findingId', element: <FindingDetailPage /> },
-      { path: 'assets', element: <AssetRegistryPage /> },
-      { path: 'assets/:assetId', element: <AssetDetailPage /> },
-      { path: 'mitigation-plans', element: <MitigationPlansPage /> },
-      { path: 'reports', element: <ReportsPage /> },
-      { path: 'audit-logs', element: <AuditLogsPage /> },
-      { path: 'settings', element: <SettingsPage /> },
-      { path: 'vendor-assessments', element: <VendorAssessmentsPage /> },
-      { path: 'vendor-assessments/:vendorId', element: <VendorDetailPage /> },
+      { path: '/overview', element: <OverviewPage /> },
+      { path: '/ai-insights', element: <AiInsightsPage /> },
+      { path: '/risks', element: <RiskRegisterPage /> },
+      { path: '/risks/:riskId', element: <RiskDetailPage /> },
+      { path: '/financial-exposure', element: <FinancialExposurePage /> },
+      { path: '/risk-scenarios', element: <RiskScenariosPage /> },
+      { path: '/cybersecurity', element: <CybersecurityPage /> },
+      { path: '/cybersecurity/:findingId', element: <FindingDetailPage /> },
+      { path: '/assets', element: <AssetRegistryPage /> },
+      { path: '/assets/:assetId', element: <AssetDetailPage /> },
+      { path: '/mitigation-plans', element: <MitigationPlansPage /> },
+      { path: '/reports', element: <ReportsPage /> },
+      { path: '/audit-logs', element: <AuditLogsPage /> },
+      { path: '/settings', element: <SettingsPage /> },
+      { path: '/vendor-assessments', element: <VendorAssessmentsPage /> },
+      { path: '/vendor-assessments/:vendorId', element: <VendorDetailPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

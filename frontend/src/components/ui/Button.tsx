@@ -7,11 +7,11 @@ export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-primary-foreground shadow-card hover:brightness-110 active:brightness-95 disabled:bg-primary/50 disabled:shadow-none',
+    'bg-primary text-primary-foreground shadow-glow hover:brightness-110 active:brightness-95 disabled:bg-primary/50 disabled:shadow-none',
   secondary:
     'bg-surface-muted text-foreground border border-border hover:border-border-strong hover:bg-surface disabled:opacity-60',
   outline:
-    'border border-border-strong bg-transparent text-foreground hover:bg-surface-muted disabled:opacity-60',
+    'border border-border bg-surface text-foreground hover:bg-surface-muted hover:border-border-strong disabled:opacity-60 shadow-sm',
   ghost: 'bg-transparent text-muted hover:bg-surface-muted hover:text-foreground disabled:opacity-60',
   danger: 'bg-danger text-white shadow-card hover:brightness-110 disabled:opacity-60 disabled:shadow-none',
 };

@@ -83,13 +83,13 @@ export function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Create your organization"
-      description="The first account becomes the organization administrator. Further members are invited from Settings."
+      title="Register Organization"
+      description="Create a secure, isolated workspace for your firm's risk intelligence. The first user becomes the organization administrator."
       footer={
         <>
-          Already have an account?{' '}
-          <Link to="/login" className="rounded text-primary hover:underline">
-            Sign in
+          Already registered?{' '}
+          <Link to="/login" className="font-semibold text-primary hover:underline">
+            Sign in to Terminal
           </Link>
         </>
       }

@@ -5,9 +5,9 @@ import {
   ClipboardList,
   FileBarChart,
   Gauge,
+  History,
   Layers,
-  PiggyBank,
-  ScrollText,
+  PieChart,
   Settings,
   ShieldAlert,
   ShieldCheck,
@@ -30,15 +30,12 @@ export interface NavGroup {
 }
 
 /**
- * The eleven required sections, plus the preserved TILT vendor-assessment
- * module. Grouped so the sidebar stays readable at eleven-plus entries.
- * Settings is deliberately excluded here and rendered separately at the foot
- * of the sidebar, so account and organization controls never sit among the
- * analytical sections.
+ * Navigation items updated to match the Bloomberg Terminal aesthetic from the user prompt.
+ * Group labels are kept for internal organization but can be hidden in the UI.
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'Monitor',
+    label: 'Intelligence',
     items: [
       {
         to: '/overview',
@@ -48,94 +45,53 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: 'risk:read',
       },
       {
-        to: '/ai-insights',
-        label: 'AI Insights',
-        icon: Bot,
-        hint: 'Model status, predictions and deterministic observations',
-        permission: 'ai:read',
-      },
-    ],
-  },
-  {
-    label: 'Assess',
-    items: [
-      {
         to: '/risks',
-        label: 'Risk Intelligence',
+        label: 'Risk Assessment',
         icon: ShieldAlert,
         hint: 'The risk register: scoring, treatment and ownership',
         permission: 'risk:read',
       },
       {
-        to: '/cybersecurity',
-        label: 'Cybersecurity',
-        icon: ShieldCheck,
-        hint: 'Vulnerability findings, enrichment and context-aware priority',
-        permission: 'vulnerability:read',
-      },
-      {
-        to: '/assets',
-        label: 'Asset Registry',
-        icon: Boxes,
-        hint: 'Systems, data stores and business processes in scope',
-        permission: 'asset:read',
-      },
-    ],
-  },
-  {
-    label: 'Quantify',
-    items: [
-      {
         to: '/financial-exposure',
-        label: 'Financial Exposure',
-        icon: PiggyBank,
+        label: 'Financial Analysis',
+        icon: Boxes,
         hint: 'Scenario-based loss estimates by risk, asset and business unit',
         permission: 'financial:read',
       },
       {
-        to: '/risk-scenarios',
-        label: 'Risk Scenarios',
-        icon: Activity,
-        hint: 'Model a what-if case and compare it against the register',
-        permission: 'financial:read',
+        to: '/cybersecurity',
+        label: 'Portfolio Analysis',
+        icon: PieChart,
+        hint: 'Vulnerability findings, enrichment and context-aware priority',
+        permission: 'vulnerability:read',
       },
-    ],
-  },
-  {
-    label: 'Treat',
-    items: [
-      {
-        to: '/mitigation-plans',
-        label: 'Mitigation Plans',
-        icon: ClipboardList,
-        hint: 'Remediation actions, owners, due dates and status',
-        permission: 'mitigation:read',
-      },
-    ],
-  },
-  {
-    label: 'Govern',
-    items: [
       {
         to: '/reports',
-        label: 'Reports',
+        label: 'Risk Reports',
         icon: FileBarChart,
         hint: 'Generate, review and download board and register reports',
         permission: 'report:read',
       },
       {
         to: '/audit-logs',
-        label: 'Audit Logs',
-        icon: ScrollText,
+        label: 'Historical Analysis',
+        icon: History,
         hint: 'Who changed what, and when',
         permission: 'audit:read',
       },
       {
-        to: '/vendor-assessments',
-        label: 'Vendor Assessments',
-        icon: Layers,
-        hint: 'The retained TILT third-party questionnaire and cloud scorecard',
-        permission: 'risk:read',
+        to: '/ai-insights',
+        label: 'AI Insights',
+        icon: Bot,
+        hint: 'Model status, predictions and deterministic observations',
+        permission: 'ai:read',
+      },
+      {
+        to: '/risk-scenarios',
+        label: 'Scenario Simulation',
+        icon: Activity,
+        hint: 'Model a what-if case and compare it against the register',
+        permission: 'financial:read',
       },
     ],
   },

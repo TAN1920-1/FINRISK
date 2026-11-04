@@ -52,24 +52,21 @@ export function Sidebar({
       >
         <div
           className={cn(
-            'flex h-14 shrink-0 items-center border-b border-border px-3',
+            'flex h-14 shrink-0 items-center border-b border-border px-4',
             collapsed ? 'lg:justify-center lg:px-2' : 'justify-between',
           )}
         >
           <NavLink
             to="/overview"
-            className="flex min-w-0 items-center gap-2.5 rounded-md px-1 py-1"
+            className="flex min-w-0 items-center gap-3 rounded-md py-1"
             onClick={onClose}
             aria-label="FinRisk AI — go to overview"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-secondary text-slate-950 shadow-glow">
-              <ShieldHalf className="h-4 w-4" aria-hidden />
-            </span>
-            <span className={cn('flex min-w-0 flex-col leading-none', collapsed && 'lg:hidden')}>
-              <span className="truncate text-sm font-semibold text-foreground">FinRisk AI</span>
-              <span className="truncate text-[10px] uppercase tracking-widest text-sidebar-muted">
-                Risk intelligence
-              </span>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-glow">
+              <ShieldHalf className="h-5 w-5" aria-hidden />
+            </div>
+            <span className={cn('flex min-w-0 flex-col', collapsed && 'lg:hidden')}>
+              <span className="text-sm font-bold tracking-tight text-foreground">FinRisk AI</span>
             </span>
           </NavLink>
 
@@ -110,32 +107,22 @@ export function Sidebar({
           </button>
         ) : null}
 
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-4 pt-2">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 pt-4">
           {NAV_GROUPS.map((group) => {
             const items = group.items.filter((item) => !item.permission || can(item.permission));
             if (!items.length) return null;
             return (
-              <div key={group.label} className="mt-3 first:mt-1">
-                <p
-                  className={cn(
-                    'px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted',
-                    collapsed && 'lg:hidden',
-                  )}
-                >
-                  {group.label}
-                </p>
-                <ul className="space-y-0.5">
-                  {items.map((item) => (
-                    <SidebarLink
-                      key={item.to}
-                      item={item}
-                      collapsed={collapsed}
-                      onNavigate={onClose}
-                      active={isActive(location.pathname, item.to)}
-                    />
-                  ))}
-                </ul>
-              </div>
+              <ul key={group.label} className="space-y-1">
+                {items.map((item) => (
+                  <SidebarLink
+                    key={item.to}
+                    item={item}
+                    collapsed={collapsed}
+                    onNavigate={onClose}
+                    active={isActive(location.pathname, item.to)}
+                  />
+                ))}
+              </ul>
             );
           })}
         </nav>
@@ -186,22 +173,16 @@ function SidebarLink({
         title={collapsed ? item.label : item.hint}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'group relative flex items-center gap-2.5 rounded-lg px-2 py-2 text-xs font-medium transition-colors',
+          'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all duration-200',
           collapsed && 'lg:justify-center lg:px-0',
           active
-            ? 'bg-sidebar-active text-foreground'
-            : 'text-sidebar-muted hover:bg-sidebar-active/60 hover:text-foreground',
+            ? 'bg-primary/10 text-primary shadow-[inset_0_0_0_1px_rgba(var(--primary),0.1)]'
+            : 'text-sidebar-muted hover:bg-surface-muted hover:text-foreground',
         )}
       >
-        {active ? (
-          <span
-            className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-primary"
-            aria-hidden
-          />
-        ) : null}
         <item.icon
           className={cn(
-            'h-4 w-4 shrink-0 transition-colors',
+            'h-[18px] w-[18px] shrink-0 transition-colors',
             active ? 'text-primary' : 'text-sidebar-muted group-hover:text-foreground',
           )}
           aria-hidden

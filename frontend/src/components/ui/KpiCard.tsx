@@ -86,60 +86,49 @@ export function KpiCard({
   series?: number[];
   className?: string;
 }) {
-  const unit = kpi.currency ?? kpi.unit ?? null;
   const display = formatKpiValue(kpi);
-  const meta = KPI_META[kpi.key] ?? { icon: Gauge, tone: 'primary' as KpiTone };
-  const tone = TONE_STYLES[meta.tone];
-  const Icon = meta.icon;
+  const meta = KPI_META[kpi.key] ?? { tone: 'primary' as KpiTone };
   const points = series && series.length >= 2 ? series : undefined;
 
   return (
     <div
       className={cn(
-        'card card-interactive group relative overflow-hidden p-4',
+        'card group relative overflow-hidden p-4 flex flex-col justify-between',
         className,
       )}
     >
-      <span className={cn('absolute inset-x-0 top-0 h-0.5', tone.bar)} aria-hidden />
       <div className="flex items-start justify-between gap-2">
-        <span className={cn('flex h-8 w-8 items-center justify-center rounded-lg', tone.icon)}>
-          <Icon className="h-4 w-4" aria-hidden />
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground" title={kpi.label}>
+          {kpi.label}
+        </p>
+        <span className={cn(
+          'rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider',
+          kpi.trend && kpi.trend > 0 ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'
+        )}>
+          {kpi.trend && kpi.trend > 0 ? 'Watch' : 'Optimal'}
         </span>
-        {kpi.help_text ? (
-          <span
-            title={kpi.help_text}
-            aria-label={kpi.help_text}
-            className="cursor-help text-muted transition-colors hover:text-foreground"
-          >
-            <Info className="h-3.5 w-3.5" aria-hidden />
+      </div>
+
+      <div className="mt-4 flex items-baseline gap-1">
+        <span className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
+          {display}
+        </span>
+        {kpi.currency || kpi.unit ? (
+          <span className="text-xs font-medium text-muted-foreground">
+            {kpi.currency || kpi.unit}
           </span>
         ) : null}
       </div>
 
-      <p className="mt-3 truncate text-2xs font-medium uppercase tracking-wide text-muted" title={kpi.label}>
-        {kpi.label}
-      </p>
-
-      <div className="mt-1 flex items-baseline gap-1.5">
-        <span className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
-          {display}
-        </span>
-        {unit ? <span className="text-xs font-medium text-muted">{unit}</span> : null}
-      </div>
-
-      <div className="mt-2 flex min-h-[1.5rem] items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          {kpi.trend !== null && kpi.trend !== undefined ? <TrendIndicator value={kpi.trend} /> : null}
-          {kpi.is_estimate ? (
-            <span
-              className="rounded border border-border bg-surface-muted px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted"
-              title="Derived from the documented loss model rather than observed data."
-            >
-              estimate
-            </span>
-          ) : null}
-        </div>
-        {points ? <Sparkline points={points} stroke={tone.stroke} /> : null}
+      <div className="mt-4 flex items-center justify-between gap-2">
+        {kpi.trend !== null && kpi.trend !== undefined ? (
+          <TrendIndicator value={kpi.trend} />
+        ) : (
+          <div className="h-5" />
+        )}
+        {points ? (
+          <Sparkline points={points} stroke="hsl(var(--primary))" />
+        ) : null}
       </div>
     </div>
   );
@@ -187,14 +176,11 @@ function formatKpiValue(kpi: KpiValue): string {
   return formatNumber(kpi.value, { maximumFractionDigits: Number.isInteger(kpi.value) ? 0 : 1 });
 }
 
-/** Percentage change. Direction is labelled as well as coloured. */
 export function TrendIndicator({
   value,
-  suffix = 'vs previous period',
   className,
 }: {
   value: number;
-  suffix?: string;
   className?: string;
 }) {
   const rising = value > 0;
@@ -204,20 +190,18 @@ export function TrendIndicator({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-2xs font-medium tabular-nums',
+        'inline-flex items-center gap-1 text-[13px] font-bold tabular-nums',
         flat
-          ? 'border-border bg-surface-muted text-muted'
+          ? 'text-muted-foreground'
           : rising
-            ? 'border-danger/30 bg-danger/10 text-danger'
-            : 'border-success/30 bg-success/10 text-success',
+            ? 'text-danger'
+            : 'text-success',
         className,
       )}
-      title={`${value > 0 ? '+' : ''}${value.toFixed(1)}% ${suffix}`}
     >
-      <Icon className="h-3 w-3" aria-hidden />
+      <Icon className="h-3.5 w-3.5" aria-hidden />
       {value > 0 ? '+' : ''}
       {value.toFixed(1)}%
-      <span className="sr-only">{suffix}</span>
     </span>
   );
 }

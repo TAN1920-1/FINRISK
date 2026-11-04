@@ -65,13 +65,13 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      title="Sign in"
-      description="Access your organization's risk register, exposure model and audit trail."
+      title="Sign in to Terminal"
+      description="Access your institutional risk register, exposure models, and secure audit trails."
       footer={
         <>
-          No account yet?{' '}
-          <Link to="/register" className="rounded text-primary hover:underline">
-            Create an organization
+          New organization?{' '}
+          <Link to="/register" className="font-semibold text-primary hover:underline">
+            Register your firm
           </Link>
         </>
       }

@@ -17,30 +17,30 @@
 
 @layer base {
   :root {
-    /* Light: white surfaces on a cool neutral canvas, teal/blue accents
-       darkened so text and icons keep their contrast on a pale background. */
-    --canvas: 210 30% 97%;
+    /* Light: pure white surfaces on a very pale neutral canvas, clean teal/blue accents.
+       Matches the high-contrast, premium light aesthetic from the reference terminal. */
+    --canvas: 210 20% 98%;
     --surface: 0 0% 100%;
-    --surface-muted: 210 24% 95%;
+    --surface-muted: 210 20% 96%;
     --surface-raised: 0 0% 100%;
-    --border: 214 22% 88%;
-    --border-strong: 214 18% 74%;
-    --foreground: 215 42% 15%;
-    --muted-foreground: 215 16% 42%;
-    --primary: 174 78% 30%;
+    --border: 214 20% 92%;
+    --border-strong: 214 15% 85%;
+    --foreground: 215 42% 12%;
+    --muted-foreground: 215 12% 45%;
+    --primary: 173 80% 36%;
     --primary-foreground: 0 0% 100%;
-    --primary-muted: 174 62% 93%;
-    --secondary: 225 82% 56%;
+    --primary-muted: 173 60% 94%;
+    --secondary: 220 85% 55%;
     --secondary-foreground: 0 0% 100%;
-    --accent: 214 85% 96%;
-    --ring: 174 78% 36%;
-    --danger: 0 70% 48%;
-    --success: 153 50% 34%;
-    --warning: 38 88% 40%;
+    --accent: 214 80% 97%;
+    --ring: 173 80% 36%;
+    --danger: 0 75% 50%;
+    --success: 153 60% 35%;
+    --warning: 38 90% 42%;
     --sidebar: 0 0% 100%;
-    --sidebar-foreground: 215 42% 15%;
-    --sidebar-muted: 215 16% 46%;
-    --sidebar-active: 210 40% 96%;
+    --sidebar-foreground: 215 42% 12%;
+    --sidebar-muted: 215 10% 50%;
+    --sidebar-active: 210 30% 97%;
 
     /* Risk bands.  Chosen to stay distinguishable without relying on hue alone:
        they are also labelled and shown with a numeric score everywhere. */
