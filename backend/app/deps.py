@@ -1,6 +1,12 @@
 """Reusable FastAPI dependencies: authentication, tenant scoping, roles, paging."""
 
-from __future__ import annotations
+# NOTE: deliberately no ``from __future__ import annotations`` in this module.
+# ``Pagination`` below is a class-based dependency, and FastAPI resolves a
+# callable's forward references using that callable's ``__globals__`` — which a
+# class object does not have.  With postponed evaluation the constrained
+# ``Query(...)`` metadata would stay an unresolved forward reference and Pydantic
+# would refuse to build the parameter adapter, breaking every paginated endpoint.
+# Evaluating the annotations eagerly keeps them real objects.
 
 from dataclasses import dataclass
 from typing import Annotated, Callable, Optional
